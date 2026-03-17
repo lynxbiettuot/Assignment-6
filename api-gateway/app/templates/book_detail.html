@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Book Detail</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px 30px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .nav-links { display: flex; gap: 20px; align-items: center; }
+        .nav-links a { text-decoration: none; color: #333; font-weight: bold; padding: 8px 12px; border-radius: 5px; transition: background-color 0.2s;}
+        .nav-links a:hover { background-color: #f0f0f0; }
+        .nav-links a.active { background-color: #007bff; color: white; }
+        .header h1 { margin: 0; color: #333; }
+        .logout-btn { background: #dc3545; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; }
+        
+        .container { background: white; padding: 40px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 600px; margin: 0 auto; margin-top: 50px;}
+        .book-title { font-size: 28px; font-weight: bold; margin: 0 0 10px 0; color: #007bff; }
+        .book-author { color: #555; margin-bottom: 20px; font-size: 18px; }
+        .book-detail { margin-bottom: 15px; font-size: 16px; border-bottom: 1px solid #eee; padding-bottom: 10px;}
+        .btn { display: inline-block; padding: 10px 20px; background: #6c757d; color: white; text-decoration: none; border-radius: 5px; margin-top: 20px; cursor: pointer; border: none; font-size: 16px; transition: background-color 0.2s;}
+        .btn:hover { background: #5a6268; }
+        .btn-primary { background: #007bff; }
+        .btn-primary:hover { background: #0056b3; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>BookStore Dashboard</h1>
+        <div class="nav-links">
+            <a href="/dashboard/">Dashboard</a>
+            <a href="/view-books/">View Books</a>
+            <a href="/add-book/">Add Book</a>
+            <a href="/cart/">Cart</a>
+        </div>
+        <button class="logout-btn" id="logout-btn">Logout</button>
+    </div>
+
+    <div class="container" id="book-content">
+        <h2>Loading book details...</h2>
+    </div>
+
+    <script>
+        // Check authentication
+        const token = localStorage.getItem('access_token');
+        if (!token) {
+            window.location.href = '/login/';
+        }
+
+        document.getElementById('logout-btn').addEventListener('click', () => {
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
+            window.location.href = '/login/';
+        });
+
+        const bookId = {{ book_id }};
+
+        async function fetchBookDetail() {
+            try {
+                // Fetch all books and find the one (since we don't have detail endpoint defined in book-service yet, we filter on client, or we could add endpoint)
+                const res = await fetch(`http://localhost:8005/books/`);
+                if (res.ok) {
+                    const books = await res.json();
+                    const book = books.find(b => b.id === bookId);
+
+                    if (book) {
+                        const container = document.getElementById('book-content');
+                        container.innerHTML = `
+                            <h1 class="book-title">${book.title}</h1>
+                            <div class="book-author">Author: ${book.author}</div>
+                            <div class="book-detail"><strong>Price:</strong> $${book.price}</div>
+                            <div class="book-detail"><strong>Stock Available:</strong> ${book.stock} units</div>
+                            <div class="book-detail" style="margin-top: 30px; border: none;">
+                                This is a detailed view of the book. In a complete application, description, reviews, and a 'Add to Cart' button would be available here.
+                            </div>
+                            <button class="btn btn-primary" onclick="addToCart(bookId)">Add to Cart</button>
+                            <a href="http://localhost:8000/view-books/" class="btn">Back to Books</a>
+                        `;
+                    } else {
+                        document.getElementById('book-content').innerHTML = `<h2>Book not found</h2><a href="http://localhost:8000/view-books/" class="btn">Back</a>`;
+                    }
+                }
+            } catch (error) {
+                console.error("Failed to load book:", error);
+                document.getElementById('book-content').innerHTML = `<h2>Error loading book details</h2><a href="http://localhost:8000/view-books/" class="btn">Back</a>`;
+            }
+        }
+
+        
+        // Extremely basic JWT decode to get user ID (do not rely on this securely for prod)
+        function parseJwt (token) {
+            try {
+                var base64Url = token.split('.')[1];
+                var base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                var jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                }).join(''));
+                return JSON.parse(jsonPayload);
+            } catch(e) { return null; }
+        }
+
+        async function addToCart(bId) {
+            const token = localStorage.getItem('access_token');
+            const payload = parseJwt(token);
+            // Default to cart 1 (for userId 1) if JWT parsing fails
+            const cartId = payload ? payload.user_id : 1; 
+
+            try {
+                // We'll optimistically assume cart 1 exists based on the user's constraints to not touch backend
+                const res = await fetch('http://localhost:8006/cart-items/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        cart: cartId,
+                        book_id: bId,
+                        quantity: 1
+                    })
+                });
+
+                let data = await res.json();
+
+                // Django REST framework might return 200 OK with {"cart":["Invalid pk..."]} 
+                // if it fails to find the cart but status wasn't explicitly set to 400 in the APIView.
+                if (res.ok && data.id) {
+                    alert('Successfully added to cart!');
+                    window.location.href = '/cart/';
+                } else {
+                    // Fallback: This user doesn't have a record in the cart table!
+                    // Let's create the cart mapping for this user ID.
+                    const createRes = await fetch('http://localhost:8006/carts/', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ customer_id: cartId })
+                    });
+                    
+                    const newCart = await createRes.json();
+                    const actualCartId = newCart.id || cartId;
+
+                    // Try adding to cart once more
+                    const retryRes = await fetch('http://localhost:8006/cart-items/', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ cart: actualCartId, book_id: bId, quantity: 1 })
+                    });
+
+                    let retryData = await retryRes.json();
+                    if (retryRes.ok && retryData.id) {
+                        alert('Successfully added to cart!');
+                        window.location.href = '/cart/';
+                    } else {
+                        alert('Failed to add to cart: ' + JSON.stringify(retryData));
+                    }
+                }
+            } catch (err) {
+                console.error(err);
+                alert("Network error talking to Cart Service.");
+            }
+        }
+
+        fetchBookDetail();
+    </script>
+</body>
+</html>

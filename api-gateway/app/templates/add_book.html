@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Add Book</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px 30px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .nav-links { display: flex; gap: 20px; align-items: center; }
+        .nav-links a { text-decoration: none; color: #333; font-weight: bold; padding: 8px 12px; border-radius: 5px; transition: background-color 0.2s;}
+        .nav-links a:hover { background-color: #f0f0f0; }
+        .nav-links a.active { background-color: #007bff; color: white; }
+        .header h1 { margin: 0; color: #333; }
+        .logout-btn { background: #dc3545; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; }
+        
+        .container { background: white; padding: 40px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 600px; margin: 0 auto; }
+        h2 { color: #333; margin-top: 0; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; color: #555; }
+        input[type="text"], input[type="number"], textarea, input[type="url"] { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
+        textarea { resize: vertical; height: 100px; }
+        button[type="submit"] { width: 100%; padding: 12px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; margin-top: 10px; font-weight: bold; transition: background 0.2s; }
+        button[type="submit"]:hover { background: #218838; }
+        
+        .error { color: red; margin-bottom: 15px; display: none; }
+        .success { color: green; margin-bottom: 15px; display: none; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>BookStore Dashboard</h1>
+        <div class="nav-links">
+            <a href="/dashboard/">Dashboard</a>
+            <a href="/view-books/">View Books</a>
+            <a href="/add-book/" class="active">Add Book</a>
+            <a href="/cart/">Cart</a>
+            <a href="/shipping-list/">Shipping Orders</a>
+        </div>
+        <button class="logout-btn" id="logout-btn">Logout</button>
+    </div>
+
+    <div class="container">
+        <h2>Add a New Book</h2>
+        <div id="error-msg" class="error"></div>
+        <div id="success-msg" class="success">Book added successfully!</div>
+        
+        <form id="add-book-form">
+            <div class="form-group">
+                <label for="image">Book Image URL (Optional)</label>
+                <input type="url" id="image" placeholder="https://example.com/image.jpg">
+                <small style="color: #888;">Note: Custom image fields were requested but backend models might not support them yet. They will be ignored or mocked.</small>
+            </div>
+            <div class="form-group">
+                <label for="title">Book Title</label>
+                <input type="text" id="title" placeholder="The Great Gatsby" required>
+            </div>
+            <div class="form-group">
+                <label for="author">Author</label>
+                <input type="text" id="author" placeholder="F. Scott Fitzgerald" required>
+            </div>
+            <div class="form-group">
+                <label for="description">Description (Optional)</label>
+                <textarea id="description" placeholder="A short description of the book..."></textarea>
+            </div>
+            <div class="form-group">
+                <label for="price">Price ($)</label>
+                <input type="number" id="price" placeholder="19.99" step="0.01" min="0" required>
+            </div>
+            <button type="submit">Publish Book</button>
+        </form>
+    </div>
+
+    <script>
+        // Check authentication
+        const token = localStorage.getItem('access_token');
+        if (!token) {
+            window.location.href = '/login/';
+        }
+
+        document.getElementById('logout-btn').addEventListener('click', () => {
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
+            window.location.href = '/login/';
+        });
+
+        document.getElementById('add-book-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            // The backend Book model only currently supports: title, author, price, stock
+            // We mock stock and skip image/description until backend is updated by user request later if needed.
+            const title = document.getElementById('title').value;
+            const author = document.getElementById('author').value;
+            const price = parseFloat(document.getElementById('price').value);
+            // Default stock to 10 for dummy submissions
+            const stock = 10; 
+
+            // Just to show we captured the UI entries
+            const image = document.getElementById('image').value;
+            const description = document.getElementById('description').value;
+
+            try {
+                // Post to book-service
+                const res = await fetch('http://localhost:8005/books/', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json' 
+                    },
+                    body: JSON.stringify({ title, author, price, stock })
+                });
+
+                if (res.ok) {
+                    document.getElementById('success-msg').style.display = 'block';
+                    document.getElementById('error-msg').style.display = 'none';
+                    document.getElementById('add-book-form').reset();
+                    
+                    // Hide success message after 3 seconds
+                    setTimeout(() => {
+                        document.getElementById('success-msg').style.display = 'none';
+                    }, 3000);
+                } else {
+                    const data = await res.json();
+                    const errorMsg = document.getElementById('error-msg');
+                    errorMsg.textContent = JSON.stringify(data);
+                    errorMsg.style.display = 'block';
+                    document.getElementById('success-msg').style.display = 'none';
+                }
+            } catch (error) {
+                console.error("Failed to add book:", error);
+                const errorMsg = document.getElementById('error-msg');
+                errorMsg.textContent = "Network error. Make sure book-service is running.";
+                errorMsg.style.display = 'block';
+                document.getElementById('success-msg').style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>

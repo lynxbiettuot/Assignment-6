@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Checkout - Billing & Shipping</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px 30px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .nav-links { display: flex; gap: 20px; align-items: center; }
+        .nav-links a { text-decoration: none; color: #333; font-weight: bold; padding: 8px 12px; border-radius: 5px; transition: background-color 0.2s;}
+        .nav-links a:hover { background-color: #f0f0f0; }
+        
+        .container { background: white; padding: 40px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 600px; margin: 0 auto; }
+        h2 { color: #333; margin-top: 0; margin-bottom: 20px;}
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; margin-top: 15px;}
+        input[type="text"], select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box;}
+        button { padding: 10px 20px; background-color: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; font-weight: bold; width: 100%; margin-top: 25px; }
+        button:hover { background-color: #218838; }
+        #card-details { display: none; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>BookStore Dashboard</h1>
+        <div class="nav-links">
+            <a href="/dashboard/">Dashboard</a>
+            <a href="/view-books/">View Books</a>
+            <a href="/add-book/">Add Book</a>
+            <a href="/cart/">Cart</a>
+            <a href="/shipping-list/">Shipping Orders</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>Secure Checkout</h2>
+        
+        <form id="checkout-form">
+            <div class="form-group">
+                <label for="address">Shipping Address:</label>
+                <input type="text" id="address" required placeholder="123 Book St, City, Country">
+            </div>
+
+            <div class="form-group">
+                <label for="payment-method">Payment Method:</label>
+                <select id="payment-method" required>
+                    <option value="cod">Cash on Delivery (COD)</option>
+                    <option value="credit">Credit Card</option>
+                </select>
+            </div>
+
+            <div class="form-group" id="card-details">
+                <label for="card-number">Credit Card Number:</label>
+                <input type="text" id="card-number" placeholder="XXXX-XXXX-XXXX-XXXX">
+            </div>
+
+            <button type="submit" id="submit-btn" disabled>Processing...</button>
+        </form>
+    </div>
+
+    <script>
+        document.getElementById('payment-method').addEventListener('change', function() {
+            if (this.value === 'credit') {
+                document.getElementById('card-details').style.display = 'block';
+                document.getElementById('card-number').required = true;
+            } else {
+                document.getElementById('card-details').style.display = 'none';
+                document.getElementById('card-number').required = false;
+            }
+        });
+
+        // JWT decoding
+        function parseJwt (token) {
+            try {
+                var base64Url = token.split('.')[1];
+                var base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                var jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                }).join(''));
+                return JSON.parse(jsonPayload);
+            } catch(e) { return null; }
+        }
+
+        const token = localStorage.getItem('access_token');
+        if (!token) window.location.href = '/login/';
+        
+        const payload = parseJwt(token);
+        const userId = payload ? payload.user_id : 1;
+        let activeCartId = userId; // Simplification matching previous UI
+        let currentOrder = null;
+
+        async function createPendingOrder() {
+            try {
+                const res = await fetch('http://localhost:8007/orders/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        customer_id: userId,
+                        cart_id: activeCartId
+                    })
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    currentOrder = data; // Pending order created
+                    document.getElementById('submit-btn').disabled = false;
+                    document.getElementById('submit-btn').innerText = `Pay $${data.total_price} & Place Order`;
+                } else {
+                    alert("Cart is empty or failed to initiate order.");
+                    window.location.href = '/cart/';
+                }
+            } catch (err) {
+                console.error(err);
+                alert("Network error connecting to Order Service");
+            }
+        }
+
+        document.getElementById('checkout-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!currentOrder) return;
+
+            const method = document.getElementById('payment-method').value;
+            const cardMode = method === 'credit' ? "Credit Card" : "COD";
+            const cardNum = document.getElementById('card-number').value || null;
+            const address = document.getElementById('address').value;
+
+            document.getElementById('submit-btn').disabled = true;
+            document.getElementById('submit-btn').innerText = "Processing transation...";
+
+            try {
+                // Submit to Pay Service
+                const payRes = await fetch('http://localhost:8009/payments/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        order_id: currentOrder.id,
+                        amount: currentOrder.total_price,
+                        payment_method: cardMode,
+                        card_number: cardNum,
+                        address: address // passed along to ship service
+                    })
+                });
+
+                if (payRes.ok) {
+                    // Gateway handles the shipping switch
+                    window.location.href = `/shipping/?order_id=${currentOrder.id}`;
+                } else {
+                    const err = await payRes.json();
+                    alert("Payment Failed: " + JSON.stringify(err));
+                    document.getElementById('submit-btn').disabled = false;
+                    document.getElementById('submit-btn').innerText = "Try Again";
+                }
+            } catch (error) {
+                console.error(error);
+                alert("Network error processing payment");
+            }
+        });
+
+        // Start saga flow by freezing cart into an Order
+        createPendingOrder();
+    </script>
+</body>
+</html>

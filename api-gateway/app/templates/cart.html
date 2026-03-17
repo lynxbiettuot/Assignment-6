@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Your Cart</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px 30px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .nav-links { display: flex; gap: 20px; align-items: center; }
+        .nav-links a { text-decoration: none; color: #333; font-weight: bold; padding: 8px 12px; border-radius: 5px; transition: background-color 0.2s;}
+        .nav-links a:hover { background-color: #f0f0f0; }
+        .nav-links a.active { background-color: #007bff; color: white; }
+        .header h1 { margin: 0; color: #333; }
+        .logout-btn { background: #dc3545; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; }
+        
+        .container { background: white; padding: 40px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 800px; margin: 0 auto; }
+        h2 { color: #333; margin-top: 0; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { text-align: left; padding: 12px; border-bottom: 1px solid #ddd; }
+        th { background-color: #f8f9fa; }
+        .total-row { font-weight: bold; font-size: 18px; }
+        .checkout-btn { display: block; width: 100%; text-align: center; padding: 15px; background: #28a745; color: white; text-decoration: none; border-radius: 5px; margin-top: 30px; font-size: 18px; font-weight: bold; transition: background 0.2s; }
+        .checkout-btn:hover { background: #218838; }
+        .empty-cart { text-align: center; color: #777; padding: 40px; font-style: italic; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>BookStore Dashboard</h1>
+        <div class="nav-links">
+            <a href="/dashboard/">Dashboard</a>
+            <a href="/view-books/">View Books</a>
+            <a href="/add-book/">Add Book</a>
+            <a href="/cart/" class="active">Cart</a>
+            <a href="/shipping-list/">Shipping Orders</a>
+        </div>
+        <button class="logout-btn" id="logout-btn">Logout</button>
+    </div>
+
+    <div class="container">
+        <h2>Your Shopping Cart</h2>
+        <div id="cart-content">
+            <div class="empty-cart">Loading cart...</div>
+        </div>
+    </div>
+
+    <script>
+        // Check authentication
+        const token = localStorage.getItem('access_token');
+        if (!token) {
+            window.location.href = '/login/';
+        }
+
+        // Extremely basic JWT decode to get user ID (do not rely on this securely for prod)
+        function parseJwt (token) {
+            try {
+                var base64Url = token.split('.')[1];
+                var base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                var jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                }).join(''));
+                return JSON.parse(jsonPayload);
+            } catch(e) { return null; }
+        }
+
+        const payload = parseJwt(token);
+        const userId = payload ? payload.user_id : 1;
+
+        document.getElementById('logout-btn').addEventListener('click', () => {
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
+            window.location.href = '/login/';
+        });
+
+        async function loadCart() {
+            try {
+                // Fetch books to correlate titles and prices
+                let books = [];
+                try {
+                    const bookRes = await fetch('http://localhost:8005/books/');
+                    if (bookRes.ok) books = await bookRes.json();
+                } catch (e) { console.warn("Could not load books:", e); }
+
+                const container = document.getElementById('cart-content');
+
+                // Fetch cart items
+                let cartItems = [];
+                try {
+                    const cartRes = await fetch(`http://localhost:8006/carts/${userId}/`);
+                    if (cartRes.ok) {
+                        const data = await cartRes.json();
+                        // cart-service returns 200 OK but with {"error": "..."} if not found
+                        if (data.error) {
+                            cartItems = [];
+                        } else {
+                            cartItems = data;
+                        }
+                    } else {
+                        cartItems = [];
+                    }
+                } catch (e) {
+                    // Actual network error (CORS, offline, etc)
+                    console.error("Network error fetching cart:", e);
+                    container.innerHTML = '<div class="empty-cart">Failed to load cart. Please ensure cart-service is running on port 8006.</div>';
+                    return;
+                }
+
+                if (!cartItems || cartItems.length === 0) {
+                    container.innerHTML = '<div class="empty-cart">Your cart is empty or not yet created. Try adding a book first!</div>';
+                    return;
+                }
+
+                let tableHtml = `
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Book</th>
+                                <th>Quantity</th>
+                                <th>Price</th>
+                                <th>Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+
+                let grandTotal = 0;
+
+                cartItems.forEach(item => {
+                    const bookDetails = books.find(b => b.id === item.book_id) || { title: 'Unknown Book', price: 0 };
+                    // Handle case where price might be returned as a string from API
+                    const price = parseFloat(bookDetails.price) || 0;
+                    const subtotal = price * item.quantity;
+                    grandTotal += subtotal;
+
+                    tableHtml += `
+                        <tr>
+                            <td>${bookDetails.title}</td>
+                            <td>${item.quantity}</td>
+                            <td>$${price.toFixed(2)}</td>
+                            <td>$${subtotal.toFixed(2)}</td>
+                        </tr>
+                    `;
+                });
+
+                tableHtml += `
+                        <tr class="total-row">
+                            <td colspan="3" style="text-align: right;">Total:</td>
+                            <td>$${grandTotal.toFixed(2)}</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                    <a href="/checkout/" class="checkout-btn">Proceed to Checkout</a>
+                `;
+
+                container.innerHTML = tableHtml;
+
+            } catch (error) {
+                console.error("Unexpected Cart error:", error);
+                document.getElementById('cart-content').innerHTML = '<div class="empty-cart">An unexpected error occurred building the cart view.</div>';
+            }
+        }
+
+        loadCart();
+    </script>
+</body>
+</html>
