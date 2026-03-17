@@ -64,15 +64,25 @@
 
         // Pagination state
         let currentPage = 1;
-        const booksPerPage = 5;
         let allBooks = [];
+        let totalBooksCount = 0;
+        let hasNextPage = false;
+        let hasPrevPage = false;
 
         async function fetchBooks() {
             try {
-                // Hitting book-service directly on port 8005
-                const res = await fetch('/api/books/books/');
+                // Hitting catalog-service via API Gateway
+                // Catalog service returns: { count, next, previous, results: [...] }
+                const res = await fetch(`/api/catalog/catalog/books/?page=${currentPage}`);
                 if (res.ok) {
-                    allBooks = await res.json();
+                    const data = await res.json();
+                    
+                    // Update state based on DRF paginated response
+                    allBooks = data.results;
+                    totalBooksCount = data.count;
+                    hasNextPage = data.next !== null;
+                    hasPrevPage = data.previous !== null;
+                    
                     renderBooks();
                 }
             } catch (error) {
@@ -84,9 +94,8 @@
             const container = document.getElementById('books-container');
             container.innerHTML = '';
 
-            const startIndex = (currentPage - 1) * booksPerPage;
-            const endIndex = startIndex + booksPerPage;
-            const paginatedBooks = allBooks.slice(startIndex, endIndex);
+            // paginatedBooks is now exactly what the server returned for this page
+            const paginatedBooks = allBooks;
 
             paginatedBooks.forEach(book => {
                 const card = document.createElement('div');
@@ -111,22 +120,23 @@
             });
 
             // Update pagination controls
-            document.getElementById('page-info').textContent = `Page ${currentPage} of ${Math.ceil(allBooks.length / booksPerPage)}`;
-            document.getElementById('prev-btn').disabled = currentPage === 1;
-            document.getElementById('next-btn').disabled = endIndex >= allBooks.length;
+            const totalPages = Math.ceil(totalBooksCount / 10); // page_size is 10 in StandardResultsSetPagination
+            document.getElementById('page-info').textContent = `Page ${currentPage} of ${totalPages || 1}`;
+            document.getElementById('prev-btn').disabled = !hasPrevPage;
+            document.getElementById('next-btn').disabled = !hasNextPage;
         }
 
         document.getElementById('prev-btn').addEventListener('click', () => {
-            if (currentPage > 1) {
+            if (hasPrevPage) {
                 currentPage--;
-                renderBooks();
+                fetchBooks();
             }
         });
 
         document.getElementById('next-btn').addEventListener('click', () => {
-            if ((currentPage * booksPerPage) < allBooks.length) {
+            if (hasNextPage) {
                 currentPage++;
-                renderBooks();
+                fetchBooks();
             }
         });
 

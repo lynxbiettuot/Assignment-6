@@ -85,8 +85,8 @@
 
         async function fetchBookDetail() {
             try {
-                // Fetch specific book detail
-                const res = await fetch(`/api/books/books/${bookId}/`);
+                // Fetch specific book detail via catalog-service
+                const res = await fetch(`/api/catalog/catalog/books/${bookId}/`);
                 if (res.ok) {
                     const book = await res.json();
                     currentBookData = book;
