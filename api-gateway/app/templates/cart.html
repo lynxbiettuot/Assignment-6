@@ -74,10 +74,11 @@
 
         async function loadCart() {
             try {
+                console.log("Loading cart for userId:", userId);
                 // Fetch books to correlate titles and prices
                 let books = [];
                 try {
-                    const bookRes = await fetch('http://localhost:8005/books/');
+                    const bookRes = await fetch('/api/books/books/');
                     if (bookRes.ok) books = await bookRes.json();
                 } catch (e) { console.warn("Could not load books:", e); }
 
@@ -86,9 +87,11 @@
                 // Fetch cart items
                 let cartItems = [];
                 try {
-                    const cartRes = await fetch(`http://localhost:8006/carts/${userId}/`);
+                    const cartRes = await fetch(`/api/cart/carts/${userId}/`);
+                    console.log("Cart fetch status:", cartRes.status);
                     if (cartRes.ok) {
                         const data = await cartRes.json();
+                        console.log("Cart data received:", data);
                         // cart-service returns 200 OK but with {"error": "..."} if not found
                         if (data.error) {
                             cartItems = [];
@@ -101,7 +104,7 @@
                 } catch (e) {
                     // Actual network error (CORS, offline, etc)
                     console.error("Network error fetching cart:", e);
-                    container.innerHTML = '<div class="empty-cart">Failed to load cart. Please ensure cart-service is running on port 8006.</div>';
+                    container.innerHTML = '<div class="empty-cart">Failed to load cart. Please ensure cart-service is running.</div>';
                     return;
                 }
 

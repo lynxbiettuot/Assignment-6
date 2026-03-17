@@ -86,7 +86,7 @@
         async function fetchBooksMap() {
             try {
                 // Fetch books to show names in order details
-                const res = await fetch('http://localhost:8005/books/');
+                const res = await fetch('/api/books/books/');
                 if (res.ok) {
                     const books = await res.json();
                     books.forEach(b => { booksMap[b.id] = b.title; });
@@ -98,7 +98,7 @@
 
         async function fetchShippingList() {
             try {
-                const res = await fetch('http://localhost:8008/shipping/all/');
+                const res = await fetch('/api/ship/shipping/all/');
                 const data = await res.json();
                 
                 const tbody = document.getElementById('shipping-tbody');
@@ -132,7 +132,7 @@
         async function completeShipping(shipId) {
             if (!confirm("Are you sure you want to delete this shipping record?")) return;
             try {
-                const res = await fetch(`http://localhost:8008/shipping/delete/${shipId}/`, {
+                const res = await fetch(`/api/ship/shipping/delete/${shipId}/`, {
                     method: 'DELETE'
                 });
                 if (res.ok) {
@@ -154,7 +154,7 @@
 
             try {
                 // Fetch from order-service
-                const res = await fetch(`http://localhost:8007/orders/detail/${orderId}/`);
+                const res = await fetch(`/api/orders/orders/detail/${orderId}/`);
                 if (res.ok) {
                     const order = await res.json();
                     let itemsHtml = `

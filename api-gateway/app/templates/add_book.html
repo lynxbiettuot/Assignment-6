@@ -46,9 +46,8 @@
         
         <form id="add-book-form">
             <div class="form-group">
-                <label for="image">Book Image URL (Optional)</label>
-                <input type="url" id="image" placeholder="https://example.com/image.jpg">
-                <small style="color: #888;">Note: Custom image fields were requested but backend models might not support them yet. They will be ignored or mocked.</small>
+                <label for="image">Book Image</label>
+                <input type="file" id="image" accept="image/*">
             </div>
             <div class="form-group">
                 <label for="title">Book Title</label>
@@ -57,10 +56,6 @@
             <div class="form-group">
                 <label for="author">Author</label>
                 <input type="text" id="author" placeholder="F. Scott Fitzgerald" required>
-            </div>
-            <div class="form-group">
-                <label for="description">Description (Optional)</label>
-                <textarea id="description" placeholder="A short description of the book..."></textarea>
             </div>
             <div class="form-group">
                 <label for="price">Price ($)</label>
@@ -86,26 +81,22 @@
         document.getElementById('add-book-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            // The backend Book model only currently supports: title, author, price, stock
-            // We mock stock and skip image/description until backend is updated by user request later if needed.
-            const title = document.getElementById('title').value;
-            const author = document.getElementById('author').value;
-            const price = parseFloat(document.getElementById('price').value);
-            // Default stock to 10 for dummy submissions
-            const stock = 10; 
-
-            // Just to show we captured the UI entries
-            const image = document.getElementById('image').value;
-            const description = document.getElementById('description').value;
+            const formData = new FormData();
+            formData.append('title', document.getElementById('title').value);
+            formData.append('author', document.getElementById('author').value);
+            formData.append('price', document.getElementById('price').value);
+            formData.append('stock', 10); // Mocked stock
+            
+            const imageFile = document.getElementById('image').files[0];
+            if (imageFile) {
+                formData.append('image', imageFile);
+            }
 
             try {
-                // Post to book-service
-                const res = await fetch('http://localhost:8005/books/', {
+                // Post to book-service via Gateway
+                const res = await fetch('/api/books/books/', {
                     method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json' 
-                    },
-                    body: JSON.stringify({ title, author, price, stock })
+                    body: formData
                 });
 
                 if (res.ok) {
@@ -113,7 +104,6 @@
                     document.getElementById('error-msg').style.display = 'none';
                     document.getElementById('add-book-form').reset();
                     
-                    // Hide success message after 3 seconds
                     setTimeout(() => {
                         document.getElementById('success-msg').style.display = 'none';
                     }, 3000);

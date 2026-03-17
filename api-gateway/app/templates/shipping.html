@@ -58,7 +58,7 @@
 
         async function fetchShippingStatus() {
             try {
-                const res = await fetch(`http://localhost:8008/shipping/${orderId}/`);
+                const res = await fetch(`/api/ship/shipping/${orderId}/`);
                 if (res.ok) {
                     const data = await res.json();
                     document.getElementById('ship-address').innerText = data.address;

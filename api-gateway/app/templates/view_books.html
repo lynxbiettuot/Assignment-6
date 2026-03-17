@@ -13,8 +13,10 @@
         .header h1 { margin: 0; color: #333; }
         .logout-btn { background: #dc3545; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; }
         .book-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; }
-        .book-card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); transition: transform 0.2s; cursor: pointer; }
+        .book-card { background: white; padding: 0; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); transition: transform 0.2s; cursor: pointer; overflow: hidden; display: flex; flex-direction: column; }
         .book-card:hover { transform: translateY(-5px); }
+        .book-image { width: 100%; height: 200px; object-fit: cover; background-color: #eee; }
+        .book-info { padding: 15px; }
         .book-title { font-size: 18px; font-weight: bold; margin: 0 0 10px 0; color: #007bff; }
         .book-author { color: #555; margin-bottom: 5px; }
         .book-price { font-weight: bold; color: #28a745; margin-bottom: 10px; }
@@ -68,7 +70,7 @@
         async function fetchBooks() {
             try {
                 // Hitting book-service directly on port 8005
-                const res = await fetch('http://localhost:8005/books/');
+                const res = await fetch('/api/books/books/');
                 if (res.ok) {
                     allBooks = await res.json();
                     renderBooks();
@@ -89,13 +91,21 @@
             paginatedBooks.forEach(book => {
                 const card = document.createElement('div');
                 card.className = 'book-card';
+                // Adjust image URL if it comes from the book-service
+                // Image path from backend is likely /media/book_images/filename.jpg
+                // We proxy it via /api/books/media/...
+                const imageUrl = book.image ? `/api/books${book.image}` : 'https://via.placeholder.com/250x200?text=No+Image';
+                
                 card.innerHTML = `
-                    <h3 class="book-title">${book.title}</h3>
-                    <div class="book-author">By: ${book.author}</div>
-                    <div class="book-price">$${book.price}</div>
+                    <img src="${imageUrl}" class="book-image" alt="${book.title}">
+                    <div class="book-info">
+                        <h3 class="book-title">${book.title}</h3>
+                        <div class="book-author">By: ${book.author}</div>
+                        <div class="book-price">$${book.price}</div>
+                    </div>
                 `;
                 card.addEventListener('click', () => {
-                    window.location.href = `http://localhost:8000/books/${book.id}/`;
+                    window.location.href = `/books/${book.id}/`;
                 });
                 container.appendChild(card);
             });

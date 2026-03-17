@@ -54,7 +54,7 @@
         async function fetchTotalBooks() {
             try {
                 // Hitting book-service on 8005
-                const res = await fetch('http://localhost:8005/books/');
+                const res = await fetch('/api/books/books/');
                 if (res.ok) {
                     const books = await res.json();
                     document.getElementById('total-books').textContent = books.length;

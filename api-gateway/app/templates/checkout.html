@@ -91,7 +91,7 @@
 
         async function createPendingOrder() {
             try {
-                const res = await fetch('http://localhost:8007/orders/', {
+                const res = await fetch('/api/orders/orders/', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -129,7 +129,7 @@
 
             try {
                 // Submit to Pay Service
-                const payRes = await fetch('http://localhost:8009/payments/', {
+                const payRes = await fetch('/api/pay/payments/', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -142,8 +142,15 @@
                 });
 
                 if (payRes.ok) {
-                    // Gateway handles the shipping switch
-                    window.location.href = `/shipping/?order_id=${currentOrder.id}`;
+                    // Clear the cart since the order has been placed
+                    try {
+                        await fetch(`/api/cart/carts/${userId}/clear/`, { method: 'DELETE' });
+                        console.log('Cart cleared after successful order.');
+                    } catch (clearErr) {
+                        console.warn('Could not clear cart (non-fatal):', clearErr);
+                    }
+                    // Redirect to the shipping orders list page
+                    window.location.href = '/shipping-list/';
                 } else {
                     const err = await payRes.json();
                     alert("Payment Failed: " + JSON.stringify(err));

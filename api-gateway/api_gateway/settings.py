@@ -121,3 +121,10 @@ STATIC_URL = 'static/'
 
 
 CORS_ALLOW_ALL_ORIGINS = True
+
+# django-revproxy configuration
+REVPROXY = {
+    "QUOTE_SPACES_AS_PLUS": False,
+}
+
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
