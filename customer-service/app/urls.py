@@ -15,6 +15,7 @@ from .views import (
     register_page,
     dashboard_page,
 )
+from . import views
 
 urlpatterns = [
     # ── Auth ──────────────────────────────────────────────────────────────────
@@ -40,4 +41,8 @@ urlpatterns = [
     path('login/',           login_page,    name='customer_login_page'),
     path('login/register/',  register_page, name='customer_register_page'),
     path('dashboard/',       dashboard_page, name='customer_dashboard_page'),
+    
+    # ── CRUD for Manager ─────────────────────────────────────────────────────
+    path('api/users/',       views.CustomerListCreateView.as_view(), name='customer_users_list'),
+    path('api/users/<int:pk>/', views.CustomerDetailView.as_view(), name='customer_users_detail'),
 ]

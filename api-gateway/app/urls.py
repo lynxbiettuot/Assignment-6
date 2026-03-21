@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import dashboard, book_detail, login_page, register_page, view_books, add_book, cart_page, checkout_page, shipping_page, shipping_list_page
+from .views import dashboard, book_detail, login_page, register_page, view_books, add_book, cart_page, checkout_page, shipping_page, shipping_list_page, staff_list_page, customer_list_page
 
 urlpatterns = [
     path('login/', login_page, name='login'),
@@ -32,4 +32,13 @@ urlpatterns = [
     path('staff/add-book/',  add_book,     {'template': 'staff_add_book.html'},  name='staff_add_book_ui'),
     path('staff/books/<int:book_id>/', book_detail, {'template': 'staff_book_detail.html'}, name='staff_book_detail'),
     path('staff/shipping-list/', shipping_list_page, {'template': 'staff_shipping_list.html'}, name='staff_shipping_ui'),
+    
+    # ── Manager Service UI ───────────────────────────────────────────────────
+    path('manager/login/',     login_page,    {'template': 'manager_login.html'},    name='manager_login_ui'),
+    path('manager/register/',  register_page, {'template': 'manager_register.html'}, name='manager_register_ui'),
+    path('manager/dashboard/', dashboard,     {'template': 'manager_dashboard.html'}, name='manager_dashboard_ui'),
+    path('manager/view-books/', view_books,   {'template': 'manager_view_books.html'}, name='manager_view_books_ui'),
+    path('manager/books/<int:book_id>/', book_detail, {'template': 'manager_book_detail.html'}, name='manager_book_detail_ui'),
+    path('manager/staff/',     staff_list_page, {'template': 'manager_staff_list.html'}, name='manager_staff_list_ui'),
+    path('manager/customers/', customer_list_page, {'template': 'manager_customer_list.html'}, name='manager_customer_list_ui'),
 ]

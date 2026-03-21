@@ -91,3 +91,16 @@ class StaffBookCreateProxyView(APIView):
             files=files
         )
         return Response(res.json(), status=res.status_code)
+
+from rest_framework import generics
+from .serializers import UserSerializer
+
+class StaffListCreateView(generics.ListCreateAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    permission_classes = [IsAuthenticated]
+
+class StaffDetailView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    permission_classes = [IsAuthenticated]

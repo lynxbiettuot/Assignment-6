@@ -60,3 +60,55 @@ class CustomerProfileSerializer(serializers.ModelSerializer):
         model  = CustomerProfile
         fields = ('user_id', 'username', 'email', 'phone', 'address', 'date_of_birth', 'created_at', 'updated_at')
         read_only_fields = ('user_id', 'username', 'email', 'created_at', 'updated_at')
+
+class CustomerManagerSerializer(serializers.ModelSerializer):
+    phone = serializers.CharField(source='customer_profile.phone', required=False, allow_blank=True)
+    address = serializers.CharField(source='customer_profile.address', required=False, allow_blank=True)
+    date_of_birth = serializers.DateField(source='customer_profile.date_of_birth', required=False, allow_null=True)
+    password = serializers.CharField(write_only=True, required=False)
+
+    class Meta:
+        model = User
+        fields = ('id', 'username', 'email', 'password', 'phone', 'address', 'date_of_birth')
+
+    def create(self, validated_data):
+        profile_data = validated_data.pop('customer_profile', {})
+        password = validated_data.pop('password', None)
+        
+        user = User.objects.create(
+            username=validated_data['username'],
+            email=validated_data.get('email', '')
+        )
+        if password:
+            user.set_password(password)
+        else:
+            user.set_password('default123')
+        user.save()
+        
+        CustomerProfile.objects.create(
+            user=user,
+            phone=profile_data.get('phone', ''),
+            address=profile_data.get('address', ''),
+            date_of_birth=profile_data.get('date_of_birth')
+        )
+        return user
+
+    def update(self, instance, validated_data):
+        profile_data = validated_data.pop('customer_profile', {})
+        password = validated_data.pop('password', None)
+        
+        instance.username = validated_data.get('username', instance.username)
+        instance.email = validated_data.get('email', instance.email)
+        if password:
+            instance.set_password(password)
+        instance.save()
+        
+        profile, _ = CustomerProfile.objects.get_or_create(user=instance)
+        if 'phone' in profile_data:
+            profile.phone = profile_data['phone']
+        if 'address' in profile_data:
+            profile.address = profile_data['address']
+        if 'date_of_birth' in profile_data:
+            profile.date_of_birth = profile_data['date_of_birth']
+        profile.save()
+        return instance

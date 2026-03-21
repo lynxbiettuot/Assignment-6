@@ -7,7 +7,7 @@ from datetime import timedelta
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'django-insecure-xwr7*k51n3u84v75gvt)qkj_vued%dp($u!967n(6mr%kv6%lz'
+SECRET_KEY = 'django-insecure-shared-secret-key-for-all-services'
 
 DEBUG = True
 

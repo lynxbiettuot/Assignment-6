@@ -39,3 +39,9 @@ def shipping_page(request, template="shipping.html"):
 
 def shipping_list_page(request, template="shipping_list.html"):
     return _no_cache_render(request, template)
+
+def staff_list_page(request, template="staff_list.html"):
+    return _no_cache_render(request, template)
+
+def customer_list_page(request, template="customer_list.html"):
+    return _no_cache_render(request, template)

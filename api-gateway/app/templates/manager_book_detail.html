@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Sửa thông tin sách - Manager View</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #eef2f5; margin: 0; padding: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px 30px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; border-left: 5px solid #2c3e50; }
+        .nav-links { display: flex; gap: 20px; align-items: center; }
+        .nav-links a { text-decoration: none; color: #333; font-weight: bold; padding: 8px 12px; border-radius: 5px; transition: background-color 0.2s;}
+        .nav-links a:hover { background-color: #f0f0f0; }
+        .header h1 { margin: 0; color: #333; }
+        .header h1 span { color: #2c3e50; }
+        
+        .container { background: white; padding: 40px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 600px; margin: 0 auto; margin-top: 50px;}
+        .book-title { font-size: 28px; font-weight: bold; margin: 0 0 20px 0; color: #2c3e50; text-align: center;}
+        
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; color: #555;}
+        .form-group input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
+        .book-image-preview { width: 100%; max-height: 300px; object-fit: contain; margin-bottom: 20px; border-radius: 10px; background-color: #fafafa; border: 1px dashed #ccc;}
+        
+        .btn { display: inline-block; padding: 10px 20px; background: #6c757d; color: white; text-decoration: none; border-radius: 5px; margin-top: 20px; cursor: pointer; border: none; font-size: 16px; font-weight: bold;}
+        .btn-save { background: #27ae60; margin-left: 10px;}
+        .actions { text-align: right; margin-top: 30px;}
+        
+        .loading { text-align: center; color: #666; font-size: 18px; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Book<span>Store</span> [Manager]</h1>
+        <div class="nav-links">
+            <a href="/manager/dashboard/">Dashboard</a>
+            <a href="/manager/view-books/">View Books</a>
+            <a href="/manager/staff/">Manage Staff</a>
+            <a href="/manager/customers/">Manage Customers</a>
+            <a onclick="logout()" style="color: #e74c3c; cursor: pointer; margin-left: 20px;">Logout</a>
+        </div>
+    </div>
+
+    <div class="container" id="book-content">
+        <div class="loading" id="loading-msg">Đang tải thông tin...</div>
+        <form id="edit-form" style="display: none;">
+            <h1 class="book-title">Sửa thông tin sách</h1>
+            <div style="text-align: center;">
+                <img id="image-preview" class="book-image-preview" src="">
+            </div>
+            
+            <div class="form-group">
+                <label>Ảnh bìa (chọn ảnh mới nếu muốn đổi)</label>
+                <input type="file" id="image" accept="image/*">
+            </div>
+            <div class="form-group">
+                <label>Tên sách</label>
+                <input type="text" id="title" required>
+            </div>
+            <div class="form-group">
+                <label>Tác giả</label>
+                <input type="text" id="author">
+            </div>
+            <div class="form-group">
+                <label>Giá ($)</label>
+                <input type="number" step="0.01" id="price" required>
+            </div>
+            
+            <div class="actions">
+                <a href="/manager/view-books/" class="btn">Hủy</a>
+                <button type="submit" class="btn btn-save" id="save-btn">Lưu thay đổi</button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        const token = localStorage.getItem('access_token');
+        if (!token) window.location.href = '/manager/login/';
+
+        const bookId = {{ book_id }};
+
+        async function fetchBookDetail() {
+            try {
+                const res = await fetch(`/api/manager/api/catalog/${bookId}/`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    const book = await res.json();
+                    
+                    document.getElementById('loading-msg').style.display = 'none';
+                    document.getElementById('edit-form').style.display = 'block';
+                    
+                    const imageUrl = book.image ? `/api/books${book.image}` : 'https://via.placeholder.com/600x400?text=No+Image';
+                    document.getElementById('image-preview').src = imageUrl;
+                    
+                    document.getElementById('title').value = book.title;
+                    document.getElementById('author').value = book.author || '';
+                    document.getElementById('price').value = book.price || 0;
+                } else {
+                    document.getElementById('loading-msg').innerText = "Không thể tải thông tin sách!";
+                }
+            } catch (error) { console.error(error); }
+        }
+
+        document.getElementById('image').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    document.getElementById('image-preview').src = evt.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        document.getElementById('edit-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const saveBtn = document.getElementById('save-btn');
+            saveBtn.disabled = true;
+            saveBtn.innerText = 'Đang lưu...';
+            
+            const formData = new FormData();
+            formData.append('title', document.getElementById('title').value);
+            formData.append('author', document.getElementById('author').value);
+            formData.append('price', document.getElementById('price').value);
+            
+            const imageFile = document.getElementById('image').files[0];
+            if (imageFile) {
+                formData.append('image', imageFile);
+            }
+            
+            try {
+                const res = await fetch(`/api/manager/api/books/${bookId}/`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                        // Do not set Content-Type, browser will set it with boundary for FormData
+                    },
+                    body: formData
+                });
+                
+                if (res.ok) {
+                    alert('Sửa sách thành công!');
+                    window.location.href = '/manager/view-books/';
+                } else {
+                    alert('Sửa sách thất bại!');
+                    saveBtn.disabled = false;
+                    saveBtn.innerText = 'Lưu thay đổi';
+                }
+            } catch (error) {
+                console.error(error);
+                saveBtn.disabled = false;
+                saveBtn.innerText = 'Lưu thay đổi';
+            }
+        });
+
+        function logout() { localStorage.clear(); window.location.href = '/manager/login/'; }
+        fetchBookDetail();
+    </script>
+</body>
+</html>

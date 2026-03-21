@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Manager Login - BookStore</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #eef2f5; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .login-container { background: white; padding: 40px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; border-top: 5px solid #2c3e50; }
+        h1 { margin-bottom: 20px; color: #333; }
+        h1 span { color: #2c3e50; }
+        .form-group { margin-bottom: 20px; text-align: left; }
+        label { display: block; margin-bottom: 5px; color: #555; font-weight: bold; }
+        input[type="text"], input[type="password"] { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
+        button { width: 100%; padding: 12px; background: #2c3e50; color: white; border: none; border-radius: 5px; font-size: 16px; cursor: pointer; transition: background 0.3s; }
+        button:hover { background: #1a252f; }
+        .error { color: #e74c3c; margin-bottom: 15px; display: none; }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <h1>Book<span>Store</span> [Manager]</h1>
+        <p style="color:#666; margin-bottom: 25px;">Đăng nhập hệ thống quản lý</p>
+        <div class="error" id="error-msg">Tài khoản hoặc mật khẩu không đúng.</div>
+        <form id="login-form">
+            <div class="form-group">
+                <label for="username">Tên đăng nhập</label>
+                <input type="text" id="username" required autocomplete="username">
+            </div>
+            <div class="form-group">
+                <label for="password">Mật khẩu</label>
+                <input type="password" id="password" required autocomplete="current-password">
+            </div>
+            <button type="submit">Đăng nhập</button>
+        </form>
+        <div class="links" style="margin-top: 20px; font-size: 14px;">
+            Chưa có tài khoản? <a href="/manager/register/" style="color: #2c3e50; text-decoration: none; font-weight: bold;">Đăng ký ngay</a>
+        </div>
+    </div>
+    <script>
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const errorMsg = document.getElementById('error-msg');
+            
+            errorMsg.style.display = 'none';
+            
+            try {
+                const res = await fetch('/api/manager/api/login/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                if (res.ok) {
+                    const data = await res.json();
+                    localStorage.setItem('access_token', data.access);
+                    localStorage.setItem('refresh_token', data.refresh);
+                    
+                    try {
+                        const tokenPayload = JSON.parse(atob(data.access.split('.')[1]));
+                        localStorage.setItem('username', tokenPayload.username || username);
+                        if (tokenPayload.role !== 'manager') {
+                            throw new Error("Not a manager");
+                        }
+                    } catch(e) { }
+                    
+                    window.location.href = '/manager/dashboard/';
+                } else {
+                    errorMsg.style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                errorMsg.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>

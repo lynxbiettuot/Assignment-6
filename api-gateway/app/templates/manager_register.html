@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Manager Register - BookStore</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #eef2f5; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .register-container { background: white; padding: 40px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; border-top: 5px solid #2c3e50; }
+        h1 { margin-bottom: 10px; color: #333; }
+        h1 span { color: #2c3e50; }
+        .form-group { margin-bottom: 20px; text-align: left; }
+        label { display: block; margin-bottom: 5px; color: #555; font-weight: bold; }
+        input { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
+        button { width: 100%; padding: 12px; background: #2c3e50; color: white; border: none; border-radius: 5px; font-size: 16px; cursor: pointer; transition: background 0.3s; margin-top: 10px;}
+        button:hover { background: #1a252f; }
+        .error { color: #e74c3c; margin-bottom: 15px; display: none; }
+        .success { color: #27ae60; margin-bottom: 15px; display: none; }
+        .links { margin-top: 20px; font-size: 14px; }
+        .links a { color: #2c3e50; text-decoration: none; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="register-container">
+        <h1>Book<span>Store</span> [Manager]</h1>
+        <p style="color:#666; margin-bottom: 25px;">Đăng ký tài khoản quản lý mới</p>
+        <div class="error" id="error-msg"></div>
+        <div class="success" id="success-msg">Đăng ký thành công! Đang chuyển hướng...</div>
+        <form id="register-form">
+            <div class="form-group">
+                <label for="username">Tên đăng nhập *</label>
+                <input type="text" id="username" required autocomplete="username">
+            </div>
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" autocomplete="email">
+            </div>
+            <div class="form-group">
+                <label for="password">Mật khẩu *</label>
+                <input type="password" id="password" required autocomplete="new-password">
+            </div>
+            <button type="submit">Đăng ký</button>
+        </form>
+        <div class="links">
+            Đã có tài khoản? <a href="/manager/login/">Đăng nhập ngay</a>
+        </div>
+    </div>
+    <script>
+        document.getElementById('register-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const errorMsg = document.getElementById('error-msg');
+            const successMsg = document.getElementById('success-msg');
+            
+            errorMsg.style.display = 'none';
+            successMsg.style.display = 'none';
+            
+            try {
+                const res = await fetch('/api/manager/api/register/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, email, password })
+                });
+                
+                const data = await res.json();
+                if (res.ok) {
+                    successMsg.style.display = 'block';
+                    setTimeout(() => {
+                        window.location.href = '/manager/login/';
+                    }, 2000);
+                } else {
+                    errorMsg.textContent = data.error || 'Đăng ký thất bại.';
+                    errorMsg.style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Register error:', error);
+                errorMsg.textContent = 'Lỗi kết nối server.';
+                errorMsg.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>

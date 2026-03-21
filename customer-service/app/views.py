@@ -241,3 +241,16 @@ class DashboardDataView(APIView):
             'recent_orders': orders_data[:5],
             'recent_cart_items': cart_data[:5]
         })
+
+from .serializers import CustomerManagerSerializer
+
+class CustomerListCreateView(generics.ListCreateAPIView):
+    queryset = User.objects.all()
+    serializer_class = CustomerManagerSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+class CustomerDetailView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = User.objects.all()
+    serializer_class = CustomerManagerSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
