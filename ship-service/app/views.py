@@ -22,9 +22,27 @@ class GetShippingDetails(APIView):
 
 class GetAllShipping(APIView):
     def get(self, request):
-        shippings = Shipping.objects.all()
+        customer_id = request.query_params.get('customer_id')
+        if customer_id:
+            shippings = Shipping.objects.filter(customer_id=customer_id)
+        else:
+            shippings = Shipping.objects.all()
         serializer = ShippingSerializer(shippings, many=True)
         return Response(serializer.data)
+
+class UpdateShippingStatus(APIView):
+    def put(self, request, pk):
+        try:
+            shipping = Shipping.objects.get(pk=pk)
+            status = request.data.get("status")
+            if status:
+                shipping.status = status
+                shipping.save()
+                serializer = ShippingSerializer(shipping)
+                return Response(serializer.data)
+            return Response({"error": "Status is required"}, status=400)
+        except Shipping.DoesNotExist:
+            return Response({"error": "Shipping not found"}, status=404)
 
 class DeleteShipping(APIView):
     def delete(self, request, pk):

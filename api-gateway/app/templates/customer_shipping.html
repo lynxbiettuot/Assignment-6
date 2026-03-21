@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Trạng thái giao hàng – Khách hàng</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px 30px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .nav-links { display: flex; gap: 20px; align-items: center; }
+        .nav-links a { text-decoration: none; color: #333; font-weight: bold; padding: 8px 12px; border-radius: 5px; transition: background-color 0.2s;}
+        .nav-links a:hover { background-color: #f0f0f0; }
+        .header h1 { margin: 0; color: #333; }
+        .header h1 span { color: #007bff; }
+        
+        .container { background: white; padding: 40px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 600px; margin: 0 auto; text-align: center;}
+        h2 { color: #28a745; margin-top: 0; }
+        .status-box { padding: 20px; margin: 20px 0; border: 2px dashed #007bff; border-radius: 10px; background-color: #e9f5ff; }
+        .status-text { font-size: 24px; font-weight: bold; color: #007bff; }
+        .btn { display: inline-block; padding: 10px 20px; background-color: #007bff; color: white; border: none; border-radius: 5px; text-decoration: none; margin-top: 20px; font-weight: bold;}
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Book<span>Store</span></h1>
+        <div class="nav-links">
+            <a href="/customer/dashboard/">Dashboard</a>
+            <a href="/customer/view-books/">View Books</a>
+            <a href="/customer/cart/">Cart</a>
+            <a href="/customer/shipping-list/">Shipping Orders</a>
+        </div>
+    </div>
+
+    <div class="container" id="shipping-panel">
+        <h2>Đã xác nhận đơn hàng!</h2>
+        <p>Cảm ơn bạn đã mua sắm tại BookStore.</p>
+        
+        <div class="status-box">
+            <p><strong>Mã đơn hàng #<span id="order-num">...</span></strong></p>
+            <p>Địa chỉ giao: <br><strong id="ship-address">...</strong></p>
+            <p class="status-text" id="ship-status">Đang tải...</p>
+        </div>
+
+        <a href="/customer/dashboard/" class="btn">Tiếp tục mua sắm</a>
+    </div>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const orderId = urlParams.get('order_id');
+
+        if (!orderId) {
+            document.getElementById('shipping-panel').innerHTML = "<h2>Đơn hàng không hợp lệ</h2><a href='/customer/dashboard/' class='btn'>Quay lại</a>";
+        } else {
+            document.getElementById('order-num').innerText = orderId;
+            fetchShippingStatus();
+        }
+
+        async function fetchShippingStatus() {
+            try {
+                const res = await fetch(`/api/ship/shipping/${orderId}/`);
+                if (res.ok) {
+                    const data = await res.json();
+                    document.getElementById('ship-address').innerText = data.address;
+                    document.getElementById('ship-status').innerText = data.status.toUpperCase();
+                } else {
+                    document.getElementById('ship-status').innerText = "KHÔNG XÁC ĐỊNH";
+                }
+            } catch (err) {
+                console.error(err);
+                document.getElementById('ship-status').innerText = "LỖI MẠNG";
+            }
+        }
+    </script>
+</body>
+</html>

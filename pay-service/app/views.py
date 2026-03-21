@@ -20,9 +20,11 @@ class ProcessPayment(APIView):
             
             # 2. Trigger Shipping Service
             try:
+                customer_id = request.data.get("customer_id")
                 ship_res = requests.post(f"{SHIP_SERVICE_URL}/shipping/", json={
                     "order_id": order_id,
-                    "address": address
+                    "address": address,
+                    "customer_id": customer_id
                 })
                 if ship_res.status_code == 201:
                     return Response({"message": "Payment successful and shipping created", "payment": serializer.data}, status=201)

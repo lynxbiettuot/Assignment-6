@@ -1,9 +1,10 @@
 from django.urls import path
-from .views import CreateShipping, GetShippingDetails, GetAllShipping, DeleteShipping
+from .views import CreateShipping, GetShippingDetails, GetAllShipping, DeleteShipping, UpdateShippingStatus
 
 urlpatterns = [
     path('shipping/', CreateShipping.as_view(), name='create-shipping'),
     path('shipping/all/', GetAllShipping.as_view(), name='get-all-shipping'),
     path('shipping/<int:order_id>/', GetShippingDetails.as_view(), name='get-shipping'),
+    path('shipping/status/<int:pk>/', UpdateShippingStatus.as_view(), name='update-shipping-status'),
     path('shipping/delete/<int:pk>/', DeleteShipping.as_view(), name='delete-shipping'),
 ]

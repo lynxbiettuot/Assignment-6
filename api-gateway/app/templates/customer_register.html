@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Đăng ký – Khách hàng</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f4f7f6; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+        .card { background: white; padding: 40px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 450px; }
+        .card h1 { text-align: center; margin-bottom: 20px; color: #333; }
+        .card h1 span { color: #007bff; }
+        label { display: block; margin-top: 15px; margin-bottom: 5px; font-weight: 600; color: #555; }
+        input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; }
+        .btn { width: 100%; padding: 12px; background: #28a745; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; margin-top: 25px; }
+        .btn:hover { background: #218838; }
+        .error { color: #dc3545; background: #f8d7da; padding: 10px; border-radius: 6px; margin-bottom: 15px; display: none; text-align: center; }
+        .links { text-align: center; margin-top: 20px; }
+        .links a { color: #007bff; text-decoration: none; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>Book<span>Store</span></h1>
+        <p style="text-align: center; color: #666;">Đăng ký tài khoản khách hàng</p>
+        <div id="error-box" class="error"></div>
+        <form id="reg-form">
+            <label>Tên đăng nhập *</label>
+            <input type="text" id="username" required>
+            <label>Email</label>
+            <input type="email" id="email">
+            <label>Mật khẩu *</label>
+            <input type="password" id="password" required>
+            <label>Số điện thoại</label>
+            <input type="text" id="phone">
+            <label>Địa chỉ</label>
+            <input type="text" id="address">
+            <button type="submit" class="btn">Đăng ký</button>
+        </form>
+        <div class="links">
+            <a href="/customer/login/">Đã có tài khoản? Đăng nhập</a>
+        </div>
+    </div>
+    <script>
+        document.getElementById('reg-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const body = {
+                username: document.getElementById('username').value,
+                email: document.getElementById('email').value,
+                password: document.getElementById('password').value,
+                profile: {
+                    phone: document.getElementById('phone').value,
+                    address: document.getElementById('address').value
+                }
+            };
+            const errorBox = document.getElementById('error-box');
+
+            try {
+                const res = await fetch('/api/customer/api/register/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                if (res.ok) {
+                    alert('Đăng ký thành công! Hãy đăng nhập.');
+                    window.location.href = '/customer/login/';
+                } else {
+                    const data = await res.json();
+                    errorBox.textContent = JSON.stringify(data);
+                    errorBox.style.display = 'block';
+                }
+            } catch (err) {
+                errorBox.textContent = 'Lỗi kết nối';
+                errorBox.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>

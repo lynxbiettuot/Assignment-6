@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Đơn hàng vận chuyển – Khách hàng</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px 30px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .nav-links { display: flex; gap: 20px; align-items: center; }
+        .nav-links a { text-decoration: none; color: #333; font-weight: bold; padding: 8px 12px; border-radius: 5px; transition: background-color 0.2s;}
+        .nav-links a:hover { background-color: #f0f0f0; }
+        .nav-links a.active { background-color: #007bff; color: white; }
+        .header h1 { margin: 0; color: #333; }
+        .header h1 span { color: #007bff; }
+        .logout-btn { background: #dc3545; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; }
+        
+        .container { background: white; padding: 40px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 900px; margin: 0 auto; }
+        h1 { color: #333; margin-top: 0;}
+        table { width: 100%; border-collapse: collapse; margin-top: 20px;}
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background-color: #f0f0f0; }
+        .status-badge { padding: 5px 10px; border-radius: 15px; font-weight: bold; font-size: 14px; }
+        .status-processing { background-color: #cce5ff; color: #004085; }
+        .view-btn { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; color: white; background-color: #17a2b8; font-weight: bold;}
+        .view-btn:hover { background-color: #138496; }
+        .no-data { text-align: center; color: #777; font-style: italic; padding: 20px;}
+        
+        /* Modal */
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); }
+        .modal-content { background-color: #fefefe; margin: 10% auto; padding: 20px; border: 1px solid #888; width: 80%; max-width: 600px; border-radius: 10px; position: relative;}
+        .close-btn { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
+        .order-detail-item { padding: 10px 0; border-bottom: 1px solid #eee; display: flex; justify-content: space-between;}
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Book<span>Store</span></h1>
+        <div class="nav-links">
+            <a href="/customer/dashboard/">Dashboard</a>
+            <a href="/customer/view-books/">View Books</a>
+            <a href="/customer/cart/">Cart</a>
+            <a href="/customer/shipping-list/" class="active">Shipping Orders</a>
+        </div>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+    </div>
+
+    <div class="container">
+        <h1>Đơn hàng đang vận chuyển</h1>
+        <table id="shipping-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Mã đơn</th>
+                    <th>Địa chỉ</th>
+                    <th>Trạng thái</th>
+                    <th>Thao tác</th>
+                </tr>
+            </thead>
+            <tbody id="shipping-tbody">
+                <tr><td colspan="5" class="no-data">Đang tải...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Modal -->
+    <div id="orderModal" class="modal">
+      <div class="modal-content">
+        <span class="close-btn" onclick="closeModal()">&times;</span>
+        <h2>Chi tiết đơn hàng <span id="modal-order-id"></span></h2>
+        <div id="modal-body">Đang tải...</div>
+      </div>
+    </div>
+
+    <script>
+        const token = localStorage.getItem('access_token');
+        if (!token) window.location.href = '/customer/login/';
+
+        function logout() { localStorage.clear(); window.location.href = '/customer/login/'; }
+
+        async function fetchShippingList() {
+            try {
+                // Fetch qua proxy customer-service (tự động filter theo user_id)
+                const res = await fetch('/api/customer/api/ship/', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+                
+                const tbody = document.getElementById('shipping-tbody');
+                if (!data || data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="no-data">Bạn chưa có đơn hàng nào đang vận chuyển.</td></tr>';
+                    return;
+                }
+
+                let html = '';
+                data.forEach(ship => {
+                    html += `
+                        <tr>
+                            <td>${ship.id}</td>
+                            <td>#${ship.order_id}</td>
+                            <td>${ship.address}</td>
+                            <td><span class="status-badge status-processing">${ship.status}</span></td>
+                            <td>
+                                <button class="view-btn" onclick="viewOrderDetails(${ship.order_id})">Chi tiết</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+                tbody.innerHTML = html;
+            } catch (err) {
+                console.error(err);
+                document.getElementById('shipping-tbody').innerHTML = '<tr><td colspan="5" class="no-data">Lỗi khi tải dữ liệu.</td></tr>';
+            }
+        }
+
+        async function viewOrderDetails(orderId) {
+            const modal = document.getElementById("orderModal");
+            const modalBody = document.getElementById("modal-body");
+            document.getElementById("modal-order-id").innerText = `#${orderId}`;
+            modal.style.display = "block";
+
+            try {
+                // Fetch qua proxy của customer-service
+                const res = await fetch(`/api/customer/api/orders/`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    const orders = await res.json();
+                    const order = orders.find(o => o.id === orderId);
+                    if (order) {
+                        let h = `<p>Tổng: $${order.total_price}</p><p>Trạng thái: ${order.status}</p><h3>Sản phẩm:</h3>`;
+                        order.items.forEach(i => {
+                            h += `<div class="order-detail-item"><span>Sách #${i.book_id} (x${i.quantity})</span><strong>$${i.price}</strong></div>`;
+                        });
+                        modalBody.innerHTML = h;
+                    } else modalBody.innerHTML = "Không tìm thấy chi tiết.";
+                }
+            } catch (e) { modalBody.innerHTML = "Lỗi tải chi tiết."; }
+        }
+
+        function closeModal() { document.getElementById("orderModal").style.display = "none"; }
+        window.onclick = e => { if (e.target.className == 'modal') closeModal(); }
+
+        fetchShippingList();
+    </script>
+</body>
+</html>

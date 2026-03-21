@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Danh mục sách - Staff</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px 30px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .nav-links { display: flex; gap: 20px; align-items: center; }
+        .nav-links a { text-decoration: none; color: #333; font-weight: bold; padding: 8px 12px; border-radius: 5px; transition: background-color 0.2s;}
+        .nav-links a:hover { background-color: #f0f0f0; }
+        .nav-links a.active { background-color: #ff9800; color: white; }
+        .header h1 { margin: 0; color: #333; }
+        .header h1 span { color: #ff9800; }
+        .logout-btn { background: #dc3545; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; }
+        
+        .container { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .book-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; margin-top: 20px; }
+        .book-card { border: 1px solid #eee; border-radius: 8px; padding: 15px; text-align: center; transition: transform 0.2s; cursor: pointer; }
+        .book-card:hover { transform: translateY(-5px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        .book-card img { width: 100%; height: 200px; object-fit: contain; margin-bottom: 10px; border-radius: 5px; }
+        .book-card h3 { margin: 10px 0 5px; font-size: 16px; color: #333; }
+        .book-card p { margin: 0; color: #666; font-size: 14px; }
+        .book-card .price { font-weight: bold; color: #ff9800; margin-top: 5px; display: block;}
+        .pagination { display: flex; justify-content: center; margin-top: 30px; gap: 10px; }
+        .page-btn { padding: 8px 15px; border: 1px solid #ddd; background: white; cursor: pointer; border-radius: 5px; }
+        .page-btn:hover { background: #f0f0f0; }
+        .page-btn:disabled { background: #eee; cursor: not-allowed; color: #aaa; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Book<span>Store</span> [Staff]</h1>
+        <div class="nav-links">
+            <a href="/staff/dashboard/">Dashboard</a>
+            <a href="/staff/view-books/" class="active">View Books</a>
+            <a href="/staff/add-book/">Add Book</a>
+            <a href="/staff/shipping-list/">Shipping Orders</a>
+        </div>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+    </div>
+
+    <div class="container">
+        <h2>Danh mục sách (Chế độ xem)</h2>
+        <div id="book-grid" class="book-grid">
+            <p>Đang tải danh sách sách...</p>
+        </div>
+        <div class="pagination">
+            <button id="prev-btn" class="page-btn">Previous</button>
+            <span id="page-info" style="line-height: 35px; font-weight: bold;">Page 1</span>
+            <button id="next-btn" class="page-btn">Next</button>
+        </div>
+    </div>
+
+    <script>
+        const token = localStorage.getItem('access_token');
+        if (!token) window.location.href = '/staff/login/';
+
+        let currentPage = 1;
+        let totalBooksCount = 0;
+        let hasNextPage = false;
+        let hasPrevPage = false;
+
+        async function loadBooks() {
+            try {
+                const res = await fetch(`/api/staff/api/catalog/?page=${currentPage}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+                
+                totalBooksCount = data.count || 0;
+                hasNextPage = !!data.next;
+                hasPrevPage = !!data.previous;
+                
+                const container = document.getElementById('book-grid');
+                container.innerHTML = '';
+                
+                (data.results || []).forEach(book => {
+                    const card = document.createElement('div');
+                    card.className = 'book-card';
+                    const imageUrl = book.image ? `/api/books${book.image}` : 'https://via.placeholder.com/200x200?text=No+Image';
+                    card.innerHTML = `
+                        <img src="${imageUrl}">
+                        <h3>${book.title}</h3>
+                        <p>${book.author}</p>
+                        <span class="price">$${book.price}</span>
+                    `;
+                    card.addEventListener('click', () => {
+                        window.location.href = `/staff/books/${book.id}/`;
+                    });
+                    container.appendChild(card);
+                });
+                
+                const totalPages = Math.ceil(totalBooksCount / 10);
+                document.getElementById('page-info').textContent = `Page ${currentPage} of ${totalPages || 1}`;
+                document.getElementById('prev-btn').disabled = !hasPrevPage;
+                document.getElementById('next-btn').disabled = !hasNextPage;
+                
+            } catch (e) { console.error(e); }
+        }
+
+        document.getElementById('prev-btn').addEventListener('click', () => {
+            if (hasPrevPage) { currentPage--; loadBooks(); }
+        });
+        document.getElementById('next-btn').addEventListener('click', () => {
+            if (hasNextPage) { currentPage++; loadBooks(); }
+        });
+
+        function logout() { localStorage.clear(); window.location.href = '/staff/login/'; }
+        loadBooks();
+    </script>
+</body>
+</html>

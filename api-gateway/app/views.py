@@ -10,32 +10,32 @@ def _no_cache_render(request, template, context=None):
     return response
 
 
-def dashboard(request):
-    return _no_cache_render(request, "dashboard.html")
+def dashboard(request, template="dashboard.html"):
+    return _no_cache_render(request, template)
 
-def book_detail(request, book_id):
-    return _no_cache_render(request, "book_detail.html", {"book_id": book_id})
+def book_detail(request, book_id, template="book_detail.html"):
+    return _no_cache_render(request, template, {"book_id": book_id})
 
-def login_page(request):
-    return _no_cache_render(request, "login.html")
+def login_page(request, template="login.html"):
+    return _no_cache_render(request, template)
 
-def register_page(request):
-    return _no_cache_render(request, "register.html")
+def register_page(request, template="register.html"):
+    return _no_cache_render(request, template)
 
-def view_books(request):
-    return _no_cache_render(request, "view_books.html")
+def view_books(request, template="view_books.html"):
+    return _no_cache_render(request, template)
 
-def add_book(request):
-    return _no_cache_render(request, "add_book.html")
+def add_book(request, template="add_book.html"):
+    return _no_cache_render(request, template)
 
-def cart_page(request):
-    return _no_cache_render(request, "cart.html")
+def cart_page(request, template="cart.html"):
+    return _no_cache_render(request, template)
 
-def checkout_page(request):
-    return _no_cache_render(request, "checkout.html")
+def checkout_page(request, template="checkout.html"):
+    return _no_cache_render(request, template)
 
-def shipping_page(request):
-    return _no_cache_render(request, "shipping.html")
+def shipping_page(request, template="shipping.html"):
+    return _no_cache_render(request, template)
 
-def shipping_list_page(request):
-    return _no_cache_render(request, "shipping_list.html")
+def shipping_list_page(request, template="shipping_list.html"):
+    return _no_cache_render(request, template)

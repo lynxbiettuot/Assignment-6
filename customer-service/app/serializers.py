@@ -1,7 +1,62 @@
+from django.contrib.auth.models import User
 from rest_framework import serializers
-from .models import Customer
+from .models import CustomerProfile
 
-class CustomerSerializer(serializers.ModelSerializer):
+
+# ── Registration ─────────────────────────────────────────────────────────────
+
+class RegisterSerializer(serializers.ModelSerializer):
+    password         = serializers.CharField(write_only=True, min_length=6)
+    phone            = serializers.CharField(required=False, default='', allow_blank=True)
+    address          = serializers.CharField(required=False, default='', allow_blank=True)
+    date_of_birth    = serializers.DateField(required=False, allow_null=True)
+
     class Meta:
-        model = Customer
-        fields = '__all__'
+        model  = User
+        fields = ('id', 'username', 'email', 'password', 'phone', 'address', 'date_of_birth')
+        extra_kwargs = {'email': {'required': False}}
+
+    def create(self, validated_data):
+        # Pop extra profile fields before creating user
+        phone         = validated_data.pop('phone', '')
+        address       = validated_data.pop('address', '')
+        date_of_birth = validated_data.pop('date_of_birth', None)
+
+        user = User.objects.create_user(
+            username=validated_data['username'],
+            email=validated_data.get('email', ''),
+            password=validated_data['password'],
+        )
+        CustomerProfile.objects.create(
+            user=user,
+            phone=phone,
+            address=address,
+            date_of_birth=date_of_birth,
+        )
+        return user
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        try:
+            profile = instance.customer_profile
+            rep['phone']         = profile.phone
+            rep['address']       = profile.address
+            rep['date_of_birth'] = str(profile.date_of_birth) if profile.date_of_birth else None
+        except CustomerProfile.DoesNotExist:
+            rep['phone']         = ''
+            rep['address']       = ''
+            rep['date_of_birth'] = None
+        return rep
+
+
+# ── Profile view / update ─────────────────────────────────────────────────────
+
+class CustomerProfileSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(source='user.username', read_only=True)
+    email    = serializers.EmailField(source='user.email', read_only=True)
+    user_id  = serializers.IntegerField(source='user.id', read_only=True)
+
+    class Meta:
+        model  = CustomerProfile
+        fields = ('user_id', 'username', 'email', 'phone', 'address', 'date_of_birth', 'created_at', 'updated_at')
+        read_only_fields = ('user_id', 'username', 'email', 'created_at', 'updated_at')

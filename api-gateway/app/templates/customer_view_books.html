@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Danh sách sách – Khách hàng</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px 30px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .nav-links { display: flex; gap: 20px; align-items: center; }
+        .nav-links a { text-decoration: none; color: #333; font-weight: bold; padding: 8px 12px; border-radius: 5px; transition: background-color 0.2s;}
+        .nav-links a:hover { background-color: #f0f0f0; }
+        .nav-links a.active { background-color: #007bff; color: white; }
+        .header h1 { margin: 0; color: #333; }
+        .header h1 span { color: #007bff; }
+        .logout-btn { background: #dc3545; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; }
+        .book-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; }
+        .book-card { background: white; padding: 0; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); transition: transform 0.2s; cursor: pointer; overflow: hidden; display: flex; flex-direction: column; }
+        .book-card:hover { transform: translateY(-5px); }
+        .book-image { width: 100%; height: 200px; object-fit: cover; background-color: #eee; }
+        .book-info { padding: 15px; }
+        .book-title { font-size: 18px; font-weight: bold; margin: 0 0 10px 0; color: #007bff; }
+        .book-author { color: #555; margin-bottom: 5px; }
+        .book-price { font-weight: bold; color: #28a745; margin-bottom: 10px; }
+        .pagination { display: flex; justify-content: center; margin-top: 30px; gap: 10px; }
+        .page-btn { padding: 8px 15px; border: 1px solid #ddd; background: white; cursor: pointer; border-radius: 5px; }
+        .page-btn:hover { background: #f0f0f0; }
+        .page-btn:disabled { background: #eee; cursor: not-allowed; color: #aaa; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Book<span>Store</span></h1>
+        <div class="nav-links">
+            <a href="/customer/dashboard/">Dashboard</a>
+            <a href="/customer/view-books/" class="active">View Books</a>
+            <a href="/customer/cart/">Cart</a>
+            <a href="/customer/shipping-list/">Shipping Orders</a>
+        </div>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+    </div>
+
+    <div id="books-container" class="book-grid">
+        <!-- Books will be loaded here via JS -->
+    </div>
+
+    <div class="pagination">
+        <button id="prev-btn" class="page-btn">Previous</button>
+        <span id="page-info" style="line-height: 35px; font-weight: bold;">Page 1</span>
+        <button id="next-btn" class="page-btn">Next</button>
+    </div>
+
+    <script>
+        const token = localStorage.getItem('access_token');
+        if (!token) {
+            window.location.href = '/customer/login/';
+        }
+
+        function logout() {
+            localStorage.clear();
+            window.location.href = '/customer/login/';
+        }
+
+        let currentPage = 1;
+        let allBooks = [];
+        let totalBooksCount = 0;
+        let hasNextPage = false;
+        let hasPrevPage = false;
+
+        async function fetchBooks() {
+            try {
+                // HÀNH ĐỘNG QUAN TRỌNG: Gọi qua proxy customer-service để áp dụng Role-based filter nếu cần
+                // Hoặc gọi trực tiếp catalog nếu catalog đã public. Người dùng muốn "hạn chế" dữ liệu khớp user_id.
+                // Ở trang View Books chung thì thường là xem tất cả sách có sẵn.
+                const res = await fetch(`/api/catalog/catalog/books/?page=${currentPage}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    allBooks = data.results;
+                    totalBooksCount = data.count;
+                    hasNextPage = data.next !== null;
+                    hasPrevPage = data.previous !== null;
+                    renderBooks();
+                }
+            } catch (error) {
+                console.error("Failed to load books:", error);
+            }
+        }
+
+        function renderBooks() {
+            const container = document.getElementById('books-container');
+            container.innerHTML = '';
+            allBooks.forEach(book => {
+                const card = document.createElement('div');
+                card.className = 'book-card';
+                const imageUrl = book.image ? `/api/books${book.image}` : 'https://via.placeholder.com/250x200?text=No+Image';
+                card.innerHTML = `
+                    <img src="${imageUrl}" class="book-image" alt="${book.title}">
+                    <div class="book-info">
+                        <h3 class="book-title">${book.title}</h3>
+                        <div class="book-author">By: ${book.author}</div>
+                        <div class="book-price">$${book.price}</div>
+                    </div>
+                `;
+                card.addEventListener('click', () => {
+                    window.location.href = `/customer/books/${book.id}/`;
+                });
+                container.appendChild(card);
+            });
+
+            const totalPages = Math.ceil(totalBooksCount / 10);
+            document.getElementById('page-info').textContent = `Page ${currentPage} of ${totalPages || 1}`;
+            document.getElementById('prev-btn').disabled = !hasPrevPage;
+            document.getElementById('next-btn').disabled = !hasNextPage;
+        }
+
+        document.getElementById('prev-btn').addEventListener('click', () => { if (hasPrevPage) { currentPage--; fetchBooks(); } });
+        document.getElementById('next-btn').addEventListener('click', () => { if (hasNextPage) { currentPage++; fetchBooks(); } });
+
+        fetchBooks();
+    </script>
+</body>
+</html>

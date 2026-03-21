@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Đăng nhập – Khách hàng</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f4f7f6; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+        .card { background: white; padding: 40px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
+        .card h1 { text-align: center; margin-bottom: 30px; color: #333; }
+        .card h1 span { color: #007bff; }
+        label { display: block; margin-bottom: 8px; font-weight: 600; color: #555; }
+        input { width: 100%; padding: 12px; margin-bottom: 20px; border: 1px solid #ddd; border-radius: 6px; }
+        .btn { width: 100%; padding: 12px; background: #007bff; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; }
+        .btn:hover { background: #0056b3; }
+        .error { color: #dc3545; background: #f8d7da; padding: 10px; border-radius: 6px; margin-bottom: 15px; display: none; text-align: center; font-size: 14px; }
+        .links { text-align: center; margin-top: 20px; }
+        .links a { color: #007bff; text-decoration: none; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>Book<span>Store</span></h1>
+        <div id="error-box" class="error"></div>
+        <form id="login-form">
+            <label>Tên đăng nhập</label>
+            <input type="text" id="username" placeholder="Username..." required>
+            <label>Mật khẩu</label>
+            <input type="password" id="password" placeholder="Password..." required>
+            <button type="submit" class="btn">Đăng nhập</button>
+        </form>
+        <div class="links">
+            <a href="/customer/register/">Chưa có tài khoản? Đăng ký ngay</a>
+        </div>
+    </div>
+    <script>
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const errorBox = document.getElementById('error-box');
+
+            try {
+                // HÀNH ĐỘNG QUAN TRỌNG: Gọi API qua proxy customer-service trên Gateway
+                const res = await fetch('/api/customer/api/login/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await res.json();
+                if (res.ok) {
+                    localStorage.setItem('access_token', data.access);
+                    localStorage.setItem('refresh_token', data.refresh);
+                    localStorage.setItem('username', username);
+                    localStorage.setItem('role', 'customer');
+                    window.location.href = '/customer/dashboard/';
+                } else {
+                    errorBox.textContent = data.detail || 'Lỗi đăng nhập';
+                    errorBox.style.display = 'block';
+                }
+            } catch (err) {
+                errorBox.textContent = 'Lỗi kết nối server';
+                errorBox.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>

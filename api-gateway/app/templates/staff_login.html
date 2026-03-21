@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Staff Login - BookStore</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #fdfdfd; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .login-card { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); width: 100%; max-width: 400px; border: 1px solid #eee; }
+        .login-card h2 { margin-top: 0; color: #333; text-align: center; margin-bottom: 30px; font-weight: 600; }
+        .login-card h2 span { color: #ff9800; }
+        form { display: flex; flex-direction: column; gap: 15px; }
+        input { padding: 12px 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; outline: none; transition: border-color 0.2s; }
+        input:focus { border-color: #ff9800; }
+        button { padding: 12px; background: #ff9800; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 16px; transition: background 0.3s; }
+        button:hover { background: #e68a00; }
+        .error { color: #d32f2f; font-size: 13px; margin-top: 10px; text-align: center; }
+        .back-home { margin-top: 20px; text-align: center; }
+        .back-home a { color: #666; text-decoration: none; font-size: 13px; }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <h2>Staff <span>Portal</span></h2>
+        <form id="login-form">
+            <input type="text" id="username" placeholder="Staff Username" required>
+            <input type="password" id="password" placeholder="Password" required>
+            <button type="submit">Login to Portal</button>
+        </form>
+        <div id="error-message" class="error"></div>
+        <div class="back-home">
+            <a href="/staff/register/">Don't have an account? Register as Staff</a><br><br>
+            <a href="/login/">Are you an Admin? Login here</a>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const errorDiv = document.getElementById('error-message');
+            errorDiv.textContent = '';
+
+            try {
+                // Đăng nhập qua API Gateway proxy đến staff-service
+                const res = await fetch('/api/staff/api/login/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    localStorage.setItem('access_token', data.access);
+                    localStorage.setItem('username', username);
+                    localStorage.setItem('role', 'staff');
+                    window.location.href = '/staff/dashboard/';
+                } else {
+                    errorDiv.textContent = 'Invalid credentials for Staff.';
+                }
+            } catch (err) {
+                errorDiv.textContent = 'Connection error.';
+            }
+        });
+    </script>
+</body>
+</html>

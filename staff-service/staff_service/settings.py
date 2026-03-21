@@ -32,6 +32,8 @@ ALLOWED_HOSTS = ['*']
 
 INSTALLED_APPS = [
     'rest_framework',
+    'rest_framework_simplejwt',
+    'corsheaders',
     'app',
     'django.contrib.admin',
     'django.contrib.auth',
@@ -44,12 +46,32 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+}
+
+from datetime import timedelta
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+}
+
+# Service URLs
+CATALOG_SERVICE_URL = "http://catalog-service:8000"
+SHIP_SERVICE_URL = "http://ship-service:8000"
+BOOK_SERVICE_URL = "http://book-service:8000"
+
+CORS_ALLOW_ALL_ORIGINS = True
 
 ROOT_URLCONF = 'staff_service.urls'
 

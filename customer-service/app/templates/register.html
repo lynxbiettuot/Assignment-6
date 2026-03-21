@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đăng ký – Customer</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .card {
+            background: rgba(255,255,255,0.05);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 16px;
+            padding: 40px;
+            width: 100%;
+            max-width: 440px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+        }
+        .logo { text-align: center; margin-bottom: 28px; }
+        .logo h1 { font-size: 26px; color: #fff; font-weight: 700; }
+        .logo span { color: #2ecc71; }
+        .logo p { color: rgba(255,255,255,0.5); font-size: 13px; margin-top: 4px; }
+        label { display: block; color: rgba(255,255,255,0.7); font-size: 13px; margin-bottom: 6px; margin-top: 16px; }
+        input {
+            width: 100%;
+            padding: 12px 14px;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 8px;
+            color: #fff;
+            font-size: 15px;
+            transition: border-color 0.2s;
+        }
+        input:focus { outline: none; border-color: #2ecc71; background: rgba(255,255,255,0.12); }
+        input::placeholder { color: rgba(255,255,255,0.3); }
+        .optional { color: rgba(255,255,255,0.35); font-size: 11px; margin-left: 4px; }
+        .btn {
+            width: 100%;
+            padding: 13px;
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 24px;
+            transition: opacity 0.2s, transform 0.1s;
+        }
+        .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+        .btn:active { transform: translateY(0); }
+        .error-box {
+            background: rgba(233,69,96,0.15);
+            border: 1px solid rgba(233,69,96,0.4);
+            color: #ff6b6b;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            margin-top: 16px;
+            display: none;
+        }
+        .success-box {
+            background: rgba(46,204,113,0.15);
+            border: 1px solid rgba(46,204,113,0.4);
+            color: #2ecc71;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            margin-top: 16px;
+            display: none;
+        }
+        .link { text-align: center; margin-top: 20px; }
+        .link a { color: #2ecc71; text-decoration: none; font-size: 14px; }
+        .link a:hover { text-decoration: underline; }
+        .divider { border: none; border-top: 1px solid rgba(255,255,255,0.08); margin: 20px 0 0; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="logo">
+            <h1>📚 Book<span>Store</span></h1>
+            <p>Tạo tài khoản khách hàng mới</p>
+        </div>
+
+        <div id="error-box" class="error-box"></div>
+        <div id="success-box" class="success-box"></div>
+
+        <form id="register-form">
+            <label for="username">Tên đăng nhập <span style="color:#e94560">*</span></label>
+            <input type="text" id="username" placeholder="Nhập username..." required autocomplete="username">
+
+            <label for="email">Email <span class="optional">(tuỳ chọn)</span></label>
+            <input type="email" id="email" placeholder="example@email.com" autocomplete="email">
+
+            <label for="password">Mật khẩu <span style="color:#e94560">*</span></label>
+            <input type="password" id="password" placeholder="Tối thiểu 6 ký tự..." required autocomplete="new-password">
+
+            <label for="phone">Số điện thoại <span class="optional">(tuỳ chọn)</span></label>
+            <input type="tel" id="phone" placeholder="0909 xxx xxx">
+
+            <label for="address">Địa chỉ <span class="optional">(tuỳ chọn)</span></label>
+            <input type="text" id="address" placeholder="Số nhà, đường, quận...">
+
+            <button type="submit" class="btn" id="submit-btn">Đăng ký</button>
+        </form>
+
+        <hr class="divider">
+        <div class="link">
+            <a href="/login/">Đã có tài khoản? Đăng nhập</a>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('register-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('submit-btn');
+            const errorBox = document.getElementById('error-box');
+            const successBox = document.getElementById('success-box');
+
+            btn.textContent = 'Đang đăng ký...';
+            btn.disabled = true;
+            errorBox.style.display = 'none';
+            successBox.style.display = 'none';
+
+            const payload = {
+                username: document.getElementById('username').value.trim(),
+                password: document.getElementById('password').value,
+                email:    document.getElementById('email').value.trim(),
+                phone:    document.getElementById('phone').value.trim(),
+                address:  document.getElementById('address').value.trim(),
+            };
+
+            try {
+                const res = await fetch('/api/register/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    successBox.textContent = 'Đăng ký thành công! Đang chuyển đến trang đăng nhập...';
+                    successBox.style.display = 'block';
+                    setTimeout(() => { window.location.href = '/login/'; }, 1500);
+                } else {
+                    let msg = '';
+                    if (typeof data === 'object') {
+                        msg = Object.entries(data)
+                            .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`)
+                            .join(' | ');
+                    } else { msg = String(data); }
+                    errorBox.textContent = msg || 'Đăng ký thất bại, vui lòng thử lại.';
+                    errorBox.style.display = 'block';
+                }
+            } catch (err) {
+                errorBox.textContent = 'Không thể kết nối server. Vui lòng thử lại.';
+                errorBox.style.display = 'block';
+            } finally {
+                btn.textContent = 'Đăng ký';
+                btn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>

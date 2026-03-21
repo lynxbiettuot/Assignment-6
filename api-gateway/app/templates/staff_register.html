@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Staff Register - BookStore</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #fdfdfd; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .register-card { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); width: 100%; max-width: 400px; border: 1px solid #eee; }
+        .register-card h2 { margin-top: 0; color: #333; text-align: center; margin-bottom: 30px; font-weight: 600; }
+        .register-card h2 span { color: #ff9800; }
+        form { display: flex; flex-direction: column; gap: 15px; }
+        input { padding: 12px 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; outline: none; transition: border-color 0.2s; }
+        input:focus { border-color: #ff9800; }
+        button { padding: 12px; background: #ff9800; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 16px; transition: background 0.3s; }
+        button:hover { background: #e68a00; }
+        .error { color: #d32f2f; font-size: 13px; margin-top: 10px; text-align: center; }
+        .success { color: #2e7d32; font-size: 13px; margin-top: 10px; text-align: center; }
+        .links { margin-top: 20px; text-align: center; display: flex; flex-direction: column; gap: 10px; }
+        .links a { color: #666; text-decoration: none; font-size: 13px; }
+    </style>
+</head>
+<body>
+    <div class="register-card">
+        <h2>Staff <span>Registration</span></h2>
+        <form id="register-form">
+            <input type="text" id="username" placeholder="Username" required>
+            <input type="email" id="email" placeholder="Email (optional)">
+            <input type="password" id="password" placeholder="Password" required>
+            <input type="password" id="confirm-password" placeholder="Confirm Password" required>
+            <button type="submit">Create Staff Account</button>
+        </form>
+        <div id="message" class=""></div>
+        <div class="links">
+            <a href="/staff/login/">Already have a staff account? Login here</a>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('register-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirm-password').value;
+            const messageDiv = document.getElementById('message');
+            
+            messageDiv.textContent = '';
+            messageDiv.className = '';
+
+            if (password !== confirmPassword) {
+                messageDiv.textContent = 'Passwords do not match.';
+                messageDiv.className = 'error';
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/staff/api/register/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password, email })
+                });
+
+                const data = await res.json();
+                if (res.ok) {
+                    messageDiv.textContent = 'Registration successful! Redirecting to login...';
+                    messageDiv.className = 'success';
+                    setTimeout(() => {
+                        window.location.href = '/staff/login/';
+                    }, 2000);
+                } else {
+                    messageDiv.textContent = data.error || 'Registration failed.';
+                    messageDiv.className = 'error';
+                }
+            } catch (err) {
+                messageDiv.textContent = 'Connection error.';
+                messageDiv.className = 'error';
+            }
+        });
+    </script>
+</body>
+</html>
