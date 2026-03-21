@@ -11,6 +11,7 @@
         .nav-links a:hover { background-color: #f0f0f0; }
         .header h1 { margin: 0; color: #333; }
         .header h1 span { color: #007bff; }
+        .version-tag { font-size: 10px; color: #ccc; background: #eee; padding: 2px 5px; border-radius: 3px; }
         .logout-btn { background: #dc3545; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; }
         
         .container { background: white; padding: 40px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 600px; margin: 0 auto; margin-top: 50px;}
@@ -21,11 +22,23 @@
         .btn:hover { background: #5a6268; }
         .btn-primary { background: #007bff; }
         .btn-primary:hover { background: #0056b3; }
+
+        /* Rating styles */
+        .rating-section { margin-top: 40px; border-top: 2px solid #eee; padding-top: 20px; }
+        .rating-item { background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 5px solid #007bff; }
+        .rating-header { display: flex; justify-content: space-between; margin-bottom: 5px; font-weight: bold; }
+        .rating-stars { color: #ffc107; }
+        .rating-comment { font-style: italic; color: #444; }
+        .rating-form { background: #fff; padding: 20px; border: 1px solid #ddd; border-radius: 10px; margin-top: 20px; display: none; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .form-group select, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
+        .comment-list { margin-top: 20px; }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>Book<span>Store</span></h1>
+        <h1>Book<span>Store</span> <span class="version-tag">v1.2</span></h1>
         <div class="nav-links">
             <a href="/customer/dashboard/">Dashboard</a>
             <a href="/customer/view-books/">View Books</a>
@@ -37,6 +50,44 @@
 
     <div class="container" id="book-content">
         <h2>Đang tải chi tiết sách...</h2>
+    </div>
+
+    <!-- Rating Section moved OUTSIDE book-content to prevent overwriting -->
+    <div class="container" style="max-width: 600px; margin-top: 20px;">
+        <div class="rating-section">
+            <h3 style="margin-top: 0;">Đánh giá và Bình luận</h3>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-primary" onclick="showRatingForm()">Tạo đánh giá</button>
+                <button class="btn" onclick="fetchRatings()">Xem các đánh giá</button>
+            </div>
+
+            <!-- Form đánh giá -->
+            <div id="rating-form" class="rating-form">
+                <h4>Viết đánh giá của bạn</h4>
+                <div class="form-group">
+                    <label for="rating-value">Số sao:</label>
+                    <select id="rating-value">
+                        <option value="5">5 Sao - Rất tuyệt</option>
+                        <option value="4">4 Sao - Tốt</option>
+                        <option value="3">3 Sao - Bình thường</option>
+                        <option value="2">2 Sao - Kém</option>
+                        <option value="1">1 Sao - Rất tệ</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="rating-comment">Bình luận (tối đa 200 từ):</label>
+                    <textarea id="rating-comment" rows="4" placeholder="Nhập bình luận của bạn tại đây..."></textarea>
+                    <div id="word-count" style="font-size: 12px; color: #888; margin-top: 5px;">Từ: 0/200</div>
+                </div>
+                <button class="btn btn-primary" onclick="submitRating()">Gửi đánh giá</button>
+                <button class="btn" onclick="hideRatingForm()">Hủy</button>
+            </div>
+
+            <!-- Danh sách comment -->
+            <div id="comment-list" class="comment-list">
+                <!-- Comments will be loaded here -->
+            </div>
+        </div>
     </div>
 
     <script>
@@ -138,6 +189,122 @@
         }
 
         fetchBookDetail();
+
+        function showRatingForm() {
+            document.getElementById('rating-form').style.display = 'block';
+        }
+
+        function hideRatingForm() {
+            document.getElementById('rating-form').style.display = 'none';
+        }
+
+        async function fetchRatings() {
+            const commentList = document.getElementById('comment-list');
+            commentList.innerHTML = '<p>Đang tải bình luận...</p>';
+            
+            try {
+                const res = await fetch(`/api/comment-rate/ratings/?book_id=${bookId}`);
+                if (res.ok) {
+                    const ratings = await res.json();
+                    renderRatings(ratings);
+                } else {
+                    commentList.innerHTML = '<p>Chưa có bình luận nào hoặc lỗi khi tải.</p>';
+                }
+            } catch (error) {
+                console.error("Failed to load ratings:", error);
+                commentList.innerHTML = '<p>Lỗi kết nối khi tải bình luận.</p>';
+            }
+        }
+
+        function renderRatings(ratings) {
+            const commentList = document.getElementById('comment-list');
+            if (ratings.length === 0) {
+                commentList.innerHTML = '<p>Chưa có bình luận nào cho sản phẩm này.</p>';
+                return;
+            }
+
+            commentList.innerHTML = ratings.map(r => `
+                <div class="rating-item">
+                    <div class="rating-header">
+                        <span>${r.user_name}</span>
+                        <span class="rating-stars">${'★'.repeat(r.rating)}${'☆'.repeat(5-r.rating)}</span>
+                    </div>
+                    <div class="rating-comment">${r.comment}</div>
+                    <div style="font-size: 12px; color: #888; margin-top: 5px;">
+                        ${new Date(r.created_at).toLocaleString('vi-VN')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function submitRating() {
+            const ratingValue = document.getElementById('rating-value').value;
+            const commentText = document.getElementById('rating-comment').value;
+            
+            // Đếm số từ
+            const wordCount = commentText.trim().split(/\s+/).filter(w => w.length > 0).length;
+            if (wordCount > 200) {
+                alert("Bình luận không được vượt quá 200 từ.");
+                return;
+            }
+
+            if (!commentText.trim()) {
+                alert("Vui lòng nhập bình luận.");
+                return;
+            }
+
+            const payload = parseJwt(token);
+            const userId = payload ? payload.user_id : null;
+            const userName = payload ? payload.username : "Khách";
+
+            if (!userId) {
+                alert("Bạn cần đăng nhập để đánh giá.");
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/comment-rate/ratings/', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        book_id: bookId,
+                        user_id: userId,
+                        user_name: userName,
+                        rating: parseInt(ratingValue),
+                        comment: commentText
+                    })
+                });
+
+                if (res.ok) {
+                    alert("Gửi đánh giá thành công!");
+                    document.getElementById('rating-comment').value = '';
+                    hideRatingForm();
+                    fetchRatings(); // Reload comment list
+                } else {
+                    const err = await res.json();
+                    alert("Lỗi khi gửi đánh giá: " + JSON.stringify(err));
+                }
+            } catch (error) {
+                console.error("Failed to submit rating:", error);
+                alert("Lỗi kết nối khi gửi đánh giá.");
+            }
+        }
+
+        // Theo dõi số từ
+        document.getElementById('rating-comment').addEventListener('input', function() {
+            const text = this.value;
+            const wordCount = text.trim().split(/\s+/).filter(w => w.length > 0).length;
+            const display = document.getElementById('word-count');
+            display.innerText = `Từ: ${wordCount}/200`;
+            if (wordCount > 200) {
+                display.style.color = 'red';
+            } else {
+                display.style.color = '#888';
+            }
+        });
     </script>
 </body>
 </html>

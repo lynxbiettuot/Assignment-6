@@ -20,14 +20,15 @@ class StandardResultsSetPagination(PageNumberPagination):
 class CatalogListView(APIView):
     """
     Fetches the full list of books from book-service, paginates them,
-    and returns them to the client.
+    and returns them to the client. Supporting search and sorting.
     """
     def get(self, request):
         try:
+            # Get search and sort parameters from query string
+            search_query = request.query_params.get('search', '').lower()
+            sort_by = request.query_params.get('sort', '')
+
             # Fetch ALL books from book service
-            # In a production app with millions of records, we would pass the pagination 
-            # parameters to the book-service instead. For this assignment, we fetch all 
-            # and paginate in the catalog service as requested.
             response = requests.get(BOOK_SERVICE_URL)
             
             if response.status_code != 200:
@@ -38,9 +39,26 @@ class CatalogListView(APIView):
             
             books_data = response.json()
             
-            # Paginate the data
+            # Apply search filter
+            if search_query:
+                books_data = [
+                    book for book in books_data 
+                    if search_query in book.get('title', '').lower() or 
+                       search_query in book.get('author', '').lower()
+                ]
+
+            # Apply sorting
+            if sort_by == 'title_asc':
+                books_data.sort(key=lambda x: x.get('title', '').lower())
+            elif sort_by == 'title_desc':
+                books_data.sort(key=lambda x: x.get('title', '').lower(), reverse=True)
+            elif sort_by == 'price_asc':
+                books_data.sort(key=lambda x: float(x.get('price', 0)))
+            elif sort_by == 'price_desc':
+                books_data.sort(key=lambda x: float(x.get('price', 0)), reverse=True)
+            
+            # Paginate the filtered and sorted data
             paginator = StandardResultsSetPagination()
-            # We mock a queryset list for the paginator
             paginated_data = paginator.paginate_queryset(books_data, request)
             
             return paginator.get_paginated_response(paginated_data)

@@ -13,6 +13,14 @@
         .header h1 { margin: 0; color: #333; }
         .header h1 span { color: #007bff; }
         .logout-btn { background: #dc3545; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; }
+        
+        .filter-bar { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; display: flex; gap: 20px; align-items: center; flex-wrap: wrap; }
+        .search-box { flex: 1; min-width: 250px; }
+        .search-box input { width: 100%; padding: 10px 15px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; font-size: 15px; outline: none; transition: border-color 0.2s; }
+        .search-box input:focus { border-color: #007bff; }
+        .sort-box { display: flex; gap: 10px; align-items: center; }
+        .sort-box select { padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 15px; background: white; outline: none; cursor: pointer; }
+
         .book-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; }
         .book-card { background: white; padding: 0; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); transition: transform 0.2s; cursor: pointer; overflow: hidden; display: flex; flex-direction: column; }
         .book-card:hover { transform: translateY(-5px); }
@@ -39,6 +47,23 @@
         <button class="logout-btn" onclick="logout()">Logout</button>
     </div>
 
+    <!-- Thanh tìm kiếm và sắp xếp -->
+    <div class="filter-bar">
+        <div class="search-box">
+            <input type="text" id="search-input" placeholder="Tìm kiếm theo tên hoặc tác giả...">
+        </div>
+        <div class="sort-box">
+            <label for="sort-select">Sắp xếp:</label>
+            <select id="sort-select">
+                <option value="">Mặc định</option>
+                <option value="title_asc">Tên: A-Z</option>
+                <option value="title_desc">Tên: Z-A</option>
+                <option value="price_asc">Giá: Thấp đến Cao</option>
+                <option value="price_desc">Giá: Cao đến Thấp</option>
+            </select>
+        </div>
+    </div>
+
     <div id="books-container" class="book-grid">
         <!-- Books will be loaded here via JS -->
     </div>
@@ -61,17 +86,20 @@
         }
 
         let currentPage = 1;
+        let searchVal = '';
+        let sortVal = '';
         let allBooks = [];
         let totalBooksCount = 0;
         let hasNextPage = false;
         let hasPrevPage = false;
 
         async function fetchBooks() {
+            const container = document.getElementById('books-container');
+            container.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px;"><h3>Đang tải danh sách sách...</h3></div>';
+            
             try {
-                // HÀNH ĐỘNG QUAN TRỌNG: Gọi qua proxy customer-service để áp dụng Role-based filter nếu cần
-                // Hoặc gọi trực tiếp catalog nếu catalog đã public. Người dùng muốn "hạn chế" dữ liệu khớp user_id.
-                // Ở trang View Books chung thì thường là xem tất cả sách có sẵn.
-                const res = await fetch(`/api/catalog/catalog/books/?page=${currentPage}`);
+                const url = `/api/catalog/catalog/books/?page=${currentPage}&search=${encodeURIComponent(searchVal)}&sort=${sortVal}`;
+                const res = await fetch(url);
                 if (res.ok) {
                     const data = await res.json();
                     allBooks = data.results;
@@ -79,15 +107,27 @@
                     hasNextPage = data.next !== null;
                     hasPrevPage = data.previous !== null;
                     renderBooks();
+                } else {
+                    container.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px;"><h3>Lỗi khi tải dữ liệu.</h3></div>';
                 }
             } catch (error) {
                 console.error("Failed to load books:", error);
+                container.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px;"><h3>Lỗi kết nối.</h3></div>';
             }
         }
 
         function renderBooks() {
             const container = document.getElementById('books-container');
             container.innerHTML = '';
+            
+            if (allBooks.length === 0) {
+                container.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px;"><h3>Không tìm thấy sách nào phù hợp.</h3></div>';
+                document.getElementById('page-info').textContent = `Page 1 of 1`;
+                document.getElementById('prev-btn').disabled = true;
+                document.getElementById('next-btn').disabled = true;
+                return;
+            }
+
             allBooks.forEach(book => {
                 const card = document.createElement('div');
                 card.className = 'book-card';
@@ -111,6 +151,28 @@
             document.getElementById('prev-btn').disabled = !hasPrevPage;
             document.getElementById('next-btn').disabled = !hasNextPage;
         }
+
+        // Debounce search to avoid too many API calls
+        function debounce(func, wait) {
+            let timeout;
+            return function() {
+                const context = this, args = arguments;
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func.apply(context, args), wait);
+            };
+        }
+
+        document.getElementById('search-input').addEventListener('input', debounce(function() {
+            searchVal = this.value;
+            currentPage = 1;
+            fetchBooks();
+        }, 400));
+
+        document.getElementById('sort-select').addEventListener('change', function() {
+            sortVal = this.value;
+            currentPage = 1;
+            fetchBooks();
+        });
 
         document.getElementById('prev-btn').addEventListener('click', () => { if (hasPrevPage) { currentPage--; fetchBooks(); } });
         document.getElementById('next-btn').addEventListener('click', () => { if (hasNextPage) { currentPage++; fetchBooks(); } });
