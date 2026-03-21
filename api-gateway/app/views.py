@@ -45,3 +45,6 @@ def staff_list_page(request, template="staff_list.html"):
 
 def customer_list_page(request, template="customer_list.html"):
     return _no_cache_render(request, template)
+
+def favorites_page(request, template="customer_favorites.html"):
+    return _no_cache_render(request, template)

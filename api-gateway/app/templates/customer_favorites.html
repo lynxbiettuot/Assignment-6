@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Sản phẩm ưa thích – Khách hàng</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px 30px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .nav-links { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; }
+        .nav-links a { text-decoration: none; color: #333; font-weight: bold; padding: 8px 12px; border-radius: 5px; transition: background-color 0.2s; }
+        .nav-links a:hover { background-color: #f0f0f0; }
+        .nav-links a.active { background-color: #ff6b35; color: white; }
+        .header h1 { margin: 0; color: #333; }
+        .header h1 span { color: #007bff; }
+        .logout-btn { background: #dc3545; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; }
+
+        /* Page header */
+        .page-header { background: linear-gradient(135deg, #ff6b35 0%, #f7c59f 100%); padding: 30px; border-radius: 10px; margin-bottom: 25px; color: white; }
+        .page-header h2 { margin: 0 0 8px 0; font-size: 26px; }
+        .page-header p { margin: 0; opacity: 0.9; }
+
+        /* Book grid */
+        .book-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 20px; }
+        .book-card { background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); transition: transform 0.2s, box-shadow 0.2s; cursor: pointer; overflow: hidden; display: flex; flex-direction: column; }
+        .book-card:hover { transform: translateY(-5px); box-shadow: 0 8px 20px rgba(255,107,53,0.2); }
+        .book-image { width: 100%; height: 200px; object-fit: cover; background-color: #eee; }
+        .book-info { padding: 15px; flex: 1; }
+        .book-title { font-size: 16px; font-weight: bold; margin: 0 0 8px 0; color: #007bff; }
+        .book-author { color: #555; font-size: 14px; margin-bottom: 5px; }
+        .book-price { font-weight: bold; color: #28a745; font-size: 15px; }
+
+        /* States */
+        .state-box { text-align: center; padding: 60px 30px; background: white; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .state-box .icon { font-size: 56px; margin-bottom: 15px; }
+        .state-box h3 { color: #555; margin-bottom: 10px; }
+        .state-box p { color: #888; margin-bottom: 20px; }
+        .btn-primary { display: inline-block; padding: 10px 24px; background: #007bff; color: white; border-radius: 5px; text-decoration: none; font-weight: bold; transition: background 0.2s; }
+        .btn-primary:hover { background: #0056b3; }
+        .loading-spinner { display: inline-block; width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #ff6b35; border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 15px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Book<span>Store</span></h1>
+        <div class="nav-links">
+            <a href="/customer/dashboard/">Dashboard</a>
+            <a href="/customer/view-books/">View Books</a>
+            <a href="/customer/cart/">Cart</a>
+            <a href="/customer/shipping-list/">Shipping Orders</a>
+            <a href="/customer/favorites/" class="active">⭐ Sản phẩm ưa thích</a>
+        </div>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+    </div>
+
+    <div class="page-header">
+        <h2>⭐ Sản phẩm ưa thích</h2>
+        <p>Gợi ý sách dành riêng cho bạn dựa trên lịch sử đánh giá</p>
+    </div>
+
+    <div id="content">
+        <div class="state-box">
+            <div class="loading-spinner"></div>
+            <h3>Đang phân tích dữ liệu...</h3>
+            <p>Hệ thống AI đang tìm kiếm sách phù hợp với bạn</p>
+        </div>
+    </div>
+
+    <script>
+        const token = localStorage.getItem('access_token');
+        if (!token) window.location.href = '/customer/login/';
+
+        function logout() {
+            localStorage.clear();
+            window.location.href = '/customer/login/';
+        }
+
+        function parseJwt(t) {
+            try {
+                return JSON.parse(atob(t.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+            } catch { return null; }
+        }
+
+        async function loadRecommendations() {
+            const payload = parseJwt(token);
+            const userId = payload ? payload.user_id : null;
+
+            if (!userId) {
+                renderError('Không xác định được tài khoản. Vui lòng đăng nhập lại.');
+                return;
+            }
+
+            try {
+                // 1. Get recommended book IDs from AI service
+                const recRes = await fetch(`/api/ai/recommend/${userId}/`);
+                if (!recRes.ok) {
+                    const err = await recRes.json().catch(() => ({}));
+                    renderEmpty(err.message || 'Chưa có đủ dữ liệu để gợi ý sách.');
+                    return;
+                }
+
+                const recData = await recRes.json();
+                const bookIds = recData.recommended_book_ids || [];
+
+                if (bookIds.length === 0) {
+                    renderEmpty(recData.message || 'Hãy đánh giá một vài cuốn sách để nhận gợi ý!');
+                    return;
+                }
+
+                // 2. Fetch book details for each recommended ID
+                const bookPromises = bookIds.map(id =>
+                    fetch(`/api/catalog/catalog/books/${id}/`).then(r => r.ok ? r.json() : null)
+                );
+                const books = (await Promise.all(bookPromises)).filter(Boolean);
+
+                if (books.length === 0) {
+                    renderEmpty('Không tìm thấy thông tin chi tiết các sách được gợi ý.');
+                    return;
+                }
+
+                renderBooks(books);
+
+            } catch (e) {
+                console.error(e);
+                renderError('Không thể kết nối đến dịch vụ gợi ý. Vui lòng thử lại sau.');
+            }
+        }
+
+        function renderBooks(books) {
+            const grid = document.createElement('div');
+            grid.className = 'book-grid';
+
+            books.forEach(book => {
+                const card = document.createElement('div');
+                card.className = 'book-card';
+                const imageUrl = book.image ? `/api/books${book.image}` : 'https://via.placeholder.com/240x200?text=No+Image';
+                card.innerHTML = `
+                    <img src="${imageUrl}" class="book-image" alt="${book.title}" onerror="this.src='https://via.placeholder.com/240x200?text=No+Image'">
+                    <div class="book-info">
+                        <div class="book-title">${book.title}</div>
+                        <div class="book-author">Tác giả: ${book.author}</div>
+                        <div class="book-price">$${book.price}</div>
+                    </div>
+                `;
+                card.addEventListener('click', () => {
+                    window.location.href = `/customer/books/${book.id}/`;
+                });
+                grid.appendChild(card);
+            });
+
+            document.getElementById('content').innerHTML = '';
+            document.getElementById('content').appendChild(grid);
+        }
+
+        function renderEmpty(msg) {
+            document.getElementById('content').innerHTML = `
+                <div class="state-box">
+                    <div class="icon">📚</div>
+                    <h3>Chưa có gợi ý</h3>
+                    <p>${msg}</p>
+                    <a href="/customer/view-books/" class="btn-primary">Khám phá sách ngay</a>
+                </div>
+            `;
+        }
+
+        function renderError(msg) {
+            document.getElementById('content').innerHTML = `
+                <div class="state-box">
+                    <div class="icon">⚠️</div>
+                    <h3>Lỗi kết nối</h3>
+                    <p>${msg}</p>
+                    <a href="/customer/dashboard/" class="btn-primary">Quay lại Dashboard</a>
+                </div>
+            `;
+        }
+
+        loadRecommendations();
+    </script>
+</body>
+</html>

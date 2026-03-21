@@ -21,6 +21,7 @@ class APIGatewayProxyView:
         'manager':      'http://manager-service:8000',
         'pay':          'http://pay-service:8000',
         'recommender':  'http://recommender-ai-service:8000',
+        'ai':           'http://recommender-ai-service:8000',
         'ship':         'http://ship-service:8000',
         'staff':        'http://staff-service:8000',
     }
