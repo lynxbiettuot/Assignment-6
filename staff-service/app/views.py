@@ -55,7 +55,12 @@ class StaffCatalogProxyView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        res = requests.get(f"{settings.CATALOG_SERVICE_URL}/catalog/books/")
+        # Forward ALL query parameters (page, search, sort, тощо) explicitly
+        query_params = request.GET.dict()
+        res = requests.get(
+            f"{settings.CATALOG_SERVICE_URL}/catalog/books/",
+            params=query_params
+        )
         return Response(res.json(), status=res.status_code)
 
 from django.contrib.auth.models import User

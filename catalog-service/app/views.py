@@ -57,11 +57,26 @@ class CatalogListView(APIView):
             elif sort_by == 'price_desc':
                 books_data.sort(key=lambda x: float(x.get('price', 0)), reverse=True)
             
+            import sys
+            page_num = request.query_params.get('page', '1')
+            sys.stderr.write(f"\n[CATALOG DEBUG] Processing request: page={page_num}, total_items={len(books_data)}\n")
+            sys.stderr.flush()
+
             # Paginate the filtered and sorted data
             paginator = StandardResultsSetPagination()
-            paginated_data = paginator.paginate_queryset(books_data, request)
-            
-            return paginator.get_paginated_response(paginated_data)
+            try:
+                paginated_data = paginator.paginate_queryset(books_data, request)
+                return paginator.get_paginated_response(paginated_data)
+            except Exception as paginate_err:
+                sys.stderr.write(f"[CATALOG ERROR] Pagination failed: {str(paginate_err)}\n")
+                sys.stderr.flush()
+                # Fallback to returning all if pagination fails (not ideal but avoids 500)
+                return Response({
+                    "count": len(books_data),
+                    "next": None,
+                    "previous": None,
+                    "results": books_data[:10]
+                })
             
         except requests.exceptions.RequestException as e:
             return Response({"error": f"Error connecting to Book Service: {str(e)}"}, status=503)
